@@ -1,10 +1,8 @@
 /* ==========================================================================
    DV-MISSION APP - CORE LOGIC ENGINE (app.js)
    Handles UI Interactions, MediaRecorder, Polling, and Role-Based Logic
-   Includes: Service Worker registration, PWA install prompt handling.
    ========================================================================== */
 
-// DV Global Application State
 const DV_STATE = {
   pin: "",
   name: "",
@@ -17,20 +15,16 @@ const DV_STATE = {
   pollTimer: null
 };
 
-// DV MediaRecorder Variables
 let DV_MEDIA_RECORDER = null;
 let DV_AUDIO_CHUNKS = [];
 let DV_RECORD_TIMEOUT = null;
-
-// DV PWA Install Prompt (captured from beforeinstallprompt)
 let DV_INSTALL_PROMPT = null;
 
 /* ==========================================================================
-   DV INITIALIZATION & EVENT LISTENERS
+   INITIALIZATION
    ========================================================================== */
 
 document.addEventListener("DOMContentLoaded", () => {
-  // 1. Initialize Local Database
   dvInitDatabase(() => {
     dvLoadMessagesFromLocal("dv_group_chats", (msgs) => {
       msgs.forEach(m => dvRenderBubble(m, "group"));
@@ -42,78 +36,59 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
-  // 2. Setup Header & Sidebar Listeners
   document.getElementById("dv-btn-left-menu").addEventListener("click", () => dvToggleSidebar("dv-left-sidebar"));
   document.getElementById("dv-btn-right-menu").addEventListener("click", () => dvToggleSidebar("dv-right-sidebar"));
   document.getElementById("dv-sidebar-overlay").addEventListener("click", dvCloseSidebars);
-
   document.getElementById("dv-btn-exit-left").addEventListener("click", dvCloseSidebars);
   document.getElementById("dv-btn-exit-right").addEventListener("click", dvCloseSidebars);
 
-  // 3. Setup Bottom Navigation Logic
   document.querySelectorAll(".dv-nav-item").forEach(btn => {
     btn.addEventListener("click", (e) => dvSwitchTab(e.currentTarget));
   });
 
-  // 4. Setup Modal Triggers
   document.querySelectorAll("[data-modal]").forEach(item => {
     item.addEventListener("click", (e) => dvOpenEdgeModal(e.currentTarget.getAttribute("data-modal")));
   });
   document.getElementById("dv-btn-close-modal").addEventListener("click", dvCloseEdgeModal);
 
-  // 5. Settings Controls
   document.getElementById("dv-btn-dark-mode").addEventListener("click", dvToggleTheme);
   document.getElementById("dv-font-slider").addEventListener("input", (e) => dvUpdateFontSize(e.target.value));
 
-  // 6. Authentication & Action Buttons
   document.getElementById("dv-btn-login").addEventListener("click", dvVerifyPin);
-
   document.getElementById("dv-pin-input").addEventListener("keydown", (e) => {
     if (e.key === "Enter") { e.preventDefault(); dvVerifyPin(); }
   });
 
-  // Group Chat Buttons
   document.getElementById("dv-group-send").addEventListener("click", () => dvSendTextMessage("group"));
   document.getElementById("dv-group-mic").addEventListener("click", () => dvToggleMicrophone("group"));
   document.getElementById("dv-group-input").addEventListener("keydown", (e) => {
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); dvSendTextMessage("group"); }
   });
 
-  // Private Chat Buttons (Admin)
   document.getElementById("dv-private-send").addEventListener("click", () => dvSendTextMessage("private"));
   document.getElementById("dv-private-mic").addEventListener("click", () => dvToggleMicrophone("private"));
   document.getElementById("dv-private-input").addEventListener("keydown", (e) => {
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); dvSendTextMessage("private"); }
   });
 
-  // Control Center
   document.getElementById("dv-btn-ticker").addEventListener("click", dvPushTicker);
 
-  // 7. PWA - Install App button + share button
   document.getElementById("dv-btn-install").addEventListener("click", dvTriggerInstall);
   document.getElementById("dv-btn-share").addEventListener("click", dvShareApp);
 
-  // 8. PWA - Register the service worker (after UI is wired)
   dvRegisterServiceWorker();
-
-  // 9. Restore the font slider to the persisted value (if any)
   dvRestoreFontSlider();
 });
 
 /* ==========================================================================
-   DV PWA LIFECYCLE
+   PWA LIFECYCLE
    ========================================================================== */
 
-/**
- * Registers sw.js so offline caching and installability work.
- * Safe to call on any browser — silently no-ops if unsupported.
- */
 function dvRegisterServiceWorker() {
   if (!("serviceWorker" in navigator)) {
     console.warn("[DV] Service workers not supported in this browser.");
     return;
   }
-
   window.addEventListener("load", () => {
     navigator.serviceWorker.register("sw.js").then((registration) => {
       console.log("[DV] Service worker registered. Scope:", registration.scope);
@@ -123,39 +98,25 @@ function dvRegisterServiceWorker() {
   });
 }
 
-/**
- * Captures the beforeinstallprompt event so we can trigger it later
- * from the "Install App" menu item. Without this, the button does nothing.
- */
 window.addEventListener("beforeinstallprompt", (event) => {
   event.preventDefault();
   DV_INSTALL_PROMPT = event;
-  console.log("[DV] Install prompt captured and ready.");
+  console.log("[DV] Install prompt captured.");
 });
 
-/**
- * Fires the deferred install prompt when the user taps "Install App".
- * If the prompt was never captured (already installed, unsupported browser,
- * or beforeinstallprompt not yet fired), show a helpful toast instead.
- */
 async function dvTriggerInstall() {
   dvCloseSidebars();
-
   if (!DV_INSTALL_PROMPT) {
-    dvShowToast("Install not available. App may already be installed, or your browser does not support it.");
+    dvShowToast("Install not available. App may already be installed or your browser does not support it.");
     return;
   }
-
   DV_INSTALL_PROMPT.prompt();
-
   const choiceResult = await DV_INSTALL_PROMPT.userChoice;
   if (choiceResult && choiceResult.outcome === "accepted") {
     dvShowToast("Installing DV-Mission...");
   } else {
     dvShowToast("Installation cancelled.");
   }
-
-  // The prompt can only be used once. Clear it.
   DV_INSTALL_PROMPT = null;
 }
 
@@ -164,29 +125,17 @@ window.addEventListener("appinstalled", () => {
   dvShowToast("DV-Mission installed.");
 });
 
-/**
- * Uses the Web Share API to share the app.
- * Falls back to copying the URL if share is not supported.
- */
 async function dvShareApp() {
   dvCloseSidebars();
-
   const shareData = {
     title: "DV-Mission App",
     text: "Connecting the mission, securely and directly.",
     url: window.location.origin + window.location.pathname
   };
-
   if (navigator.share) {
-    try {
-      await navigator.share(shareData);
-    } catch (err) {
-      // User cancelled — no toast needed
-    }
+    try { await navigator.share(shareData); } catch (err) {}
     return;
   }
-
-  // Fallback: copy to clipboard
   try {
     await navigator.clipboard.writeText(shareData.url);
     dvShowToast("Link copied to clipboard.");
@@ -195,10 +144,6 @@ async function dvShareApp() {
   }
 }
 
-/**
- * On load, reads the persisted font size and syncs the slider to it
- * so the UI matches the value set by the pre-paint script.
- */
 function dvRestoreFontSlider() {
   const slider = document.getElementById("dv-font-slider");
   if (!slider) return;
@@ -209,7 +154,7 @@ function dvRestoreFontSlider() {
 }
 
 /* ==========================================================================
-   DV NOTIFICATION ENGINE
+   NOTIFICATION ENGINE
    ========================================================================== */
 
 function dvShowLoader() {
@@ -238,7 +183,7 @@ function dvShowAlert(message) {
 }
 
 /* ==========================================================================
-   DV UI NAVIGATION & MODALS
+   NAVIGATION & MODALS
    ========================================================================== */
 
 function dvSwitchTab(btnElement) {
@@ -247,7 +192,6 @@ function dvSwitchTab(btnElement) {
     nav.classList.remove("dv-active");
     nav.removeAttribute("aria-current");
   });
-
   const targetId = btnElement.getAttribute("data-target");
   document.getElementById(targetId).classList.add("dv-active-tab");
   btnElement.classList.add("dv-active");
@@ -257,15 +201,12 @@ function dvSwitchTab(btnElement) {
 function dvToggleSidebar(sidebarId) {
   const overlay = document.getElementById("dv-sidebar-overlay");
   const sidebar = document.getElementById(sidebarId);
-
   if (sidebar.classList.contains("dv-open")) {
     dvCloseSidebars();
     return;
   }
-
   document.getElementById("dv-left-sidebar").classList.remove("dv-open");
   document.getElementById("dv-right-sidebar").classList.remove("dv-open");
-
   overlay.classList.add("dv-open");
   sidebar.classList.add("dv-open");
   sidebar.setAttribute("aria-hidden", "false");
@@ -275,7 +216,6 @@ function dvCloseSidebars() {
   const overlay = document.getElementById("dv-sidebar-overlay");
   const left = document.getElementById("dv-left-sidebar");
   const right = document.getElementById("dv-right-sidebar");
-
   overlay.classList.remove("dv-open");
   left.classList.remove("dv-open");
   right.classList.remove("dv-open");
@@ -311,6 +251,11 @@ function dvOpenEdgeModal(key) {
   const modal = document.getElementById("dv-edge-modal");
   modal.classList.add("dv-open");
   modal.setAttribute("aria-hidden", "false");
+
+  // Wire the About Developer "Show More" toggle if present
+  if (key === "about-developer") {
+    dvWireDevToggle();
+  }
 }
 
 function dvCloseEdgeModal() {
@@ -320,6 +265,25 @@ function dvCloseEdgeModal() {
   setTimeout(() => {
     document.getElementById("dv-modal-body").innerHTML = "";
   }, 300);
+}
+
+function dvWireDevToggle() {
+  const btn = document.getElementById("dv-btn-dev-toggle");
+  const more = document.getElementById("dv-dev-bio-more");
+  if (!btn || !more) return;
+
+  btn.addEventListener("click", () => {
+    const isOpen = btn.getAttribute("aria-expanded") === "true";
+    if (isOpen) {
+      more.classList.add("dv-hidden");
+      btn.setAttribute("aria-expanded", "false");
+      btn.textContent = "Show More";
+    } else {
+      more.classList.remove("dv-hidden");
+      btn.setAttribute("aria-expanded", "true");
+      btn.textContent = "Show Less";
+    }
+  });
 }
 
 function dvToggleTheme() {
@@ -339,7 +303,7 @@ function dvScrollChatToBottom(containerId) {
 }
 
 /* ==========================================================================
-   DV AUTHENTICATION & ROLE ROUTER
+   AUTHENTICATION
    ========================================================================== */
 
 async function dvVerifyPin() {
@@ -385,7 +349,7 @@ async function dvVerifyPin() {
 }
 
 /* ==========================================================================
-   DV POLLING & CHAT RENDERING
+   POLLING & RENDERING
    ========================================================================== */
 
 function dvStartPolling() {
@@ -403,7 +367,6 @@ function dvStartPolling() {
     } catch (err) {
       return;
     }
-
     if (!res || !res.ok) return;
 
     if (res.ticker) {
@@ -479,12 +442,11 @@ function dvRenderBubble(msg, roomType) {
   bubble.appendChild(textEl);
   row.appendChild(bubble);
   container.appendChild(row);
-
   container.scrollTop = container.scrollHeight;
 }
 
 /* ==========================================================================
-   DV MESSAGING (TEXT & AUDIO)
+   MESSAGING
    ========================================================================== */
 
 async function dvSendTextMessage(roomType) {
@@ -525,7 +487,6 @@ async function dvToggleMicrophone(roomType) {
     dvShowAlert("Your microphone privileges have been disabled by the Administrator.");
     return;
   }
-
   if (DV_STATE.isRecording && DV_STATE.recordTarget === roomType) {
     dvStopRecording();
     return;
@@ -538,11 +499,9 @@ async function dvToggleMicrophone(roomType) {
     DV_AUDIO_CHUNKS = [];
 
     DV_MEDIA_RECORDER = new MediaRecorder(stream);
-
     DV_MEDIA_RECORDER.ondataavailable = e => {
       if (e.data.size > 0) DV_AUDIO_CHUNKS.push(e.data);
     };
-
     DV_MEDIA_RECORDER.onstop = () => dvProcessAndUploadAudio(roomType);
 
     const micBtn = document.getElementById(`dv-${roomType}-mic`);
@@ -567,24 +526,20 @@ function dvStopRecording() {
     DV_MEDIA_RECORDER.stop();
     DV_MEDIA_RECORDER.stream.getTracks().forEach(track => track.stop());
   }
-
   clearTimeout(DV_RECORD_TIMEOUT);
   DV_STATE.isRecording = false;
-
   const micBtn = document.getElementById(`dv-${DV_STATE.recordTarget}-mic`);
   if (micBtn) micBtn.classList.remove("dv-recording");
 }
 
 function dvProcessAndUploadAudio(roomType) {
   const blob = new Blob(DV_AUDIO_CHUNKS, { type: 'audio/webm' });
-
   if (blob.size > 2000000) {
     dvShowToast("Recording too large. Try a shorter clip.");
     return;
   }
 
   const reader = new FileReader();
-
   reader.readAsDataURL(blob);
   reader.onloadend = async () => {
     dvShowLoader();
@@ -602,7 +557,6 @@ function dvProcessAndUploadAudio(roomType) {
       return;
     }
     dvHideLoader();
-
     if (!res || !res.ok) {
       dvShowToast((res && res.error) || "Voice note failed to send.");
     }
@@ -634,7 +588,7 @@ async function dvPlayAudio(audioId) {
 }
 
 /* ==========================================================================
-   DV ADMIN CONTROLS
+   ADMIN CONTROLS
    ========================================================================== */
 
 async function dvPushTicker() {
@@ -642,7 +596,6 @@ async function dvPushTicker() {
     dvShowAlert("Admin privileges required.");
     return;
   }
-
   const tickerInput = document.getElementById("dv-ticker-input").value.trim();
   if (!tickerInput) return dvShowToast("Ticker cannot be empty.");
 
