@@ -1,13 +1,12 @@
 /* ==========================================================================
    DV-MISSION APP - SERVICE WORKER (sw.js)
-   Handles Offline Caching, Cross-Origin Assets, and PWA Installation
+   Handles Offline Caching and PWA Installation
 
    IMPORTANT: Bump DV_CACHE_VERSION on every deploy that changes any
    cached file (index.html, styles.css, api.js, app.js, manifest.json).
-   If you don't bump it, users keep the old version from cache.
    ========================================================================== */
 
-const DV_CACHE_VERSION = 'v2.1';
+const DV_CACHE_VERSION = 'v1';
 const DV_CACHE_NAME = 'dv-mission-cache-' + DV_CACHE_VERSION;
 
 const DV_URLS_TO_CACHE = [
@@ -19,15 +18,16 @@ const DV_URLS_TO_CACHE = [
   './manifest.json'
 ];
 
-// Requests to this origin should never be cached or intercepted.
-// Adjust if you host the GAS backend on a different hostname.
+// Requests to these origins bypass the service worker entirely.
 const DV_BYPASS_ORIGINS = [
   'script.google.com',
   'script.googleusercontent.com'
 ];
 
-// 1. INSTALL EVENT — cache core local assets.
-// Uses Promise.allSettled so one missing file doesn't kill the whole install.
+/* ==========================================================================
+   INSTALL
+   ========================================================================== */
+
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(DV_CACHE_NAME).then((cache) => {
@@ -42,7 +42,10 @@ self.addEventListener('install', (event) => {
   self.skipWaiting();
 });
 
-// 2. ACTIVATE EVENT — remove old caches.
+/* ==========================================================================
+   ACTIVATE
+   ========================================================================== */
+
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
@@ -58,42 +61,38 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// 3. FETCH EVENT
+/* ==========================================================================
+   FETCH
+   ========================================================================== */
+
 self.addEventListener('fetch', (event) => {
   const request = event.request;
   const url = new URL(request.url);
 
-  // RULE 1: Never intercept non-GET requests (POST to GAS, etc.).
+  // Never intercept non-GET requests (POST to GAS, etc.)
   if (request.method !== 'GET') {
     return;
   }
 
-  // RULE 2: Never intercept requests to the GAS backend or other bypassed origins.
+  // Never intercept requests to the GAS backend.
   if (DV_BYPASS_ORIGINS.indexOf(url.hostname) !== -1) {
     return;
   }
 
-  // RULE 3: Navigations (the HTML shell) use network-first.
-  // This ensures a new deploy is picked up on the next app open,
-  // while still working offline if the network is down.
+  // Navigations use network-first so new deploys are picked up.
   if (request.mode === 'navigate') {
     event.respondWith(dvNetworkFirstWithCacheFallback(request));
     return;
   }
 
-  // RULE 4: Static assets (CSS, JS, images) use cache-first.
+  // Static assets use cache-first.
   event.respondWith(dvCacheFirstWithNetworkFallback(event, request));
 });
 
 /* ==========================================================================
-   DV CACHE STRATEGIES
+   STRATEGIES
    ========================================================================== */
 
-/**
- * Network-first: try to fetch fresh HTML. If the network fails,
- * fall back to the cached version. Keeps the app updatable without
- * breaking offline mode.
- */
 function dvNetworkFirstWithCacheFallback(request) {
   return fetch(request)
     .then((networkResponse) => {
@@ -113,10 +112,6 @@ function dvNetworkFirstWithCacheFallback(request) {
     });
 }
 
-/**
- * Cache-first: serve from cache immediately if we have it.
- * Otherwise fetch from network and store a copy for next time.
- */
 function dvCacheFirstWithNetworkFallback(event, request) {
   return caches.match(request).then((cachedResponse) => {
     if (cachedResponse) {
@@ -124,7 +119,6 @@ function dvCacheFirstWithNetworkFallback(event, request) {
     }
 
     return fetch(request).then((networkResponse) => {
-      // Cache only valid or opaque cross-origin responses.
       const isCacheable =
         networkResponse &&
         (networkResponse.status === 200 || networkResponse.type === 'opaque');
@@ -143,7 +137,6 @@ function dvCacheFirstWithNetworkFallback(event, request) {
       return networkResponse;
     }).catch(() => {
       console.warn('[DV SW] Network fetch failed, asset not in cache:', request.url);
-      // Return an empty 504 so the page doesn't hang waiting for a response.
       return new Response('', { status: 504, statusText: 'Offline' });
     });
   });
