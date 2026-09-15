@@ -3,9 +3,7 @@
    Strict Mobile PWA Architecture (100dvw / 100dvh)
    ========================================================================== */
 
-/* DV CSS VARIABLES (Theming Engine) */
 :root {
-  /* Default Light Mode (Facebook Branding) */
   --dv-primary: #1877F2;
   --dv-bg-main: #FFFFFF;
   --dv-bg-surface: #F0F2F5;
@@ -13,25 +11,20 @@
   --dv-text-muted: #65676B;
   --dv-border: #E4E6EB;
 
-  /* Chat Bubbles */
   --dv-bubble-in: #F0F2F5;
   --dv-bubble-in-text: #000000;
   --dv-bubble-out: #1877F2;
   --dv-bubble-out-text: #FFFFFF;
 
-  /* Semantic */
   --dv-danger: #FF3B30;
   --dv-toast-bg: #323232;
   --dv-shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
   --dv-shadow-md: 0 4px 12px rgba(0,0,0,0.15);
   --dv-shadow-lg: 0 8px 32px rgba(0,0,0,0.2);
 
-  /* Dynamic Typography */
   --dv-font-size: 18px;
 }
 
-/* DV DARK MODE OVERRIDES
-   Matches both html.dv-dark-mode (pre-paint) and body.dv-dark-mode (runtime toggle) */
 html.dv-dark-mode,
 body.dv-dark-mode {
   --dv-bg-main: #000000;
@@ -45,9 +38,6 @@ body.dv-dark-mode {
   --dv-toast-bg: #4A4A4A;
 }
 
-/* ==========================================================================
-   DV BASE ARCHITECTURE
-   ========================================================================== */
 * {
   box-sizing: border-box;
   margin: 0;
@@ -66,7 +56,6 @@ body {
   overscroll-behavior: none;
 }
 
-/* Icons */
 .dv-icon {
   width: 24px;
   height: 24px;
@@ -78,7 +67,6 @@ body {
   display: none !important;
 }
 
-/* Accessibility: visually hidden labels, readable by screen readers only */
 .dv-visually-hidden {
   position: absolute;
   width: 1px;
@@ -91,14 +79,13 @@ body {
   border: 0;
 }
 
-/* Focus visibility for keyboard and assistive tech */
 :focus-visible {
   outline: 2px solid var(--dv-primary);
   outline-offset: 2px;
 }
 
 /* ==========================================================================
-   DV LAYOUT SKELETON
+   LAYOUT SKELETON
    ========================================================================== */
 #dv-app-shell {
   display: flex;
@@ -107,7 +94,6 @@ body {
   width: 100%;
 }
 
-/* Header */
 #dv-header {
   height: 60px;
   background-color: var(--dv-primary);
@@ -121,6 +107,14 @@ body {
   z-index: 10;
 }
 
+#dv-header-title {
+  font-weight: bold;
+  font-size: calc(var(--dv-font-size) + 2px);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .dv-icon-btn {
   background: transparent;
   border: none;
@@ -132,21 +126,13 @@ body {
   justify-content: center;
   border-radius: 50%;
   transition: background-color 0.15s ease;
+  flex-shrink: 0;
 }
 
 .dv-icon-btn:active {
   background-color: rgba(255,255,255,0.15);
 }
 
-#dv-header-title {
-  font-weight: bold;
-  font-size: calc(var(--dv-font-size) + 2px);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* Main Content Area */
 #dv-content-area {
   flex-grow: 1;
   position: relative;
@@ -154,24 +140,26 @@ body {
   overflow: hidden;
 }
 
-/* Tabs */
 .dv-tab {
   display: none;
   position: absolute;
   inset: 0;
   flex-direction: column;
-  overflow: hidden; /* Inner elements own their scroll */
+  overflow: hidden;
 }
 
 .dv-tab.dv-tab-scroll {
-  overflow-y: auto; /* For tabs that need page-level scroll (home, admin) */
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .dv-active-tab {
   display: flex;
 }
 
-/* Bottom Navigation */
+/* ==========================================================================
+   BOTTOM NAVIGATION
+   ========================================================================== */
 #dv-bottom-nav {
   min-height: 65px;
   background-color: var(--dv-bg-main);
@@ -210,7 +198,7 @@ body {
 }
 
 /* ==========================================================================
-   DV COMPONENTS (Buttons, Inputs, Cards)
+   COMPONENTS
    ========================================================================== */
 .dv-btn {
   padding: 14px 24px;
@@ -227,10 +215,6 @@ body {
 .dv-btn:active {
   opacity: 0.85;
   transform: scale(0.98);
-}
-
-.dv-btn-inline {
-  width: auto;
 }
 
 .dv-btn-primary {
@@ -254,12 +238,6 @@ body {
   border-color: var(--dv-primary);
 }
 
-.dv-input:focus-visible {
-  outline: 2px solid var(--dv-primary);
-  outline-offset: 1px;
-}
-
-/* Hero / Auth Box */
 .dv-hero-card,
 .dv-auth-box {
   flex: 1;
@@ -283,13 +261,13 @@ body {
 }
 
 /* ==========================================================================
-   DV CHAT UI
+   CHAT UI
    ========================================================================== */
 .dv-chat-layout {
   display: flex;
   flex-direction: column;
   height: 100%;
-  min-height: 0; /* Allow flex child to shrink so inner scroll works */
+  min-height: 0;
 }
 
 .dv-chat-list {
@@ -350,7 +328,6 @@ body {
   display: none;
 }
 
-/* Chat Input Area */
 .dv-chat-input-area {
   display: flex;
   padding: 8px 12px;
@@ -372,12 +349,6 @@ body {
   color: var(--dv-text-main);
   font-size: var(--dv-font-size);
   outline: none;
-  resize: none;
-}
-
-.dv-chat-input:focus-visible {
-  outline: 2px solid var(--dv-primary);
-  outline-offset: 1px;
 }
 
 .dv-action-btn {
@@ -411,7 +382,6 @@ body {
   100% { transform: scale(1); }
 }
 
-/* Inline Audio Player */
 .dv-audio-player {
   display: flex;
   align-items: center;
@@ -428,7 +398,7 @@ body {
 }
 
 /* ==========================================================================
-   DV SIDEBARS (Slide Over)
+   SIDEBARS
    ========================================================================== */
 .dv-sidebar-overlay {
   position: fixed;
@@ -512,7 +482,7 @@ body {
 }
 
 /* ==========================================================================
-   DV EDGE-TO-EDGE MODAL (100dvw x 100dvh)
+   EDGE-TO-EDGE MODAL
    ========================================================================== */
 .dv-edge-modal {
   position: fixed;
@@ -531,6 +501,35 @@ body {
   visibility: visible;
 }
 
+#dv-modal-header {
+  height: 60px;
+  background-color: var(--dv-primary);
+  color: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  flex-shrink: 0;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+#dv-modal-title {
+  font-weight: bold;
+  font-size: calc(var(--dv-font-size) + 2px);
+  text-align: center;
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 0 8px;
+}
+
+.dv-modal-spacer {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+}
+
 .dv-modal-content {
   flex-grow: 1;
   overflow-y: auto;
@@ -539,7 +538,6 @@ body {
   overscroll-behavior: contain;
 }
 
-/* Modal content typography (used by templates) */
 .dv-modal-heading {
   color: var(--dv-primary);
   margin-bottom: 16px;
@@ -553,7 +551,107 @@ body {
 }
 
 /* ==========================================================================
-   DV NOTIFICATION ENGINE (Strictly Centered, Zero Blur, Zero Gray)
+   ABOUT DEVELOPER (Rotating Ring Profile)
+   ========================================================================== */
+.dv-dev-profile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 16px 0;
+}
+
+.dv-dev-avatar-wrap {
+  position: relative;
+  width: 190px;
+  height: 190px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 24px;
+}
+
+.dv-dev-avatar-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: conic-gradient(
+    from 0deg,
+    var(--dv-primary) 0deg,
+    var(--dv-primary) 90deg,
+    transparent 180deg,
+    transparent 360deg
+  );
+  animation: dv-ring-spin 3s linear infinite;
+  z-index: 1;
+}
+
+.dv-dev-avatar {
+  position: relative;
+  width: 170px;
+  height: 170px;
+  border-radius: 50%;
+  overflow: hidden;
+  background-color: var(--dv-bg-surface);
+  z-index: 2;
+  border: 4px solid var(--dv-bg-main);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dv-dev-avatar img {
+  width: 170px;
+  height: 170px;
+  object-fit: cover;
+  display: block;
+  border-radius: 50%;
+}
+
+@keyframes dv-ring-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+.dv-dev-name {
+  color: var(--dv-text-main);
+  font-size: calc(var(--dv-font-size) + 6px);
+  font-weight: bold;
+  margin-bottom: 4px;
+}
+
+.dv-dev-role {
+  color: var(--dv-primary);
+  font-size: var(--dv-font-size);
+  font-weight: 500;
+  margin-bottom: 20px;
+}
+
+.dv-dev-bio,
+.dv-dev-bio-more {
+  color: var(--dv-text-main);
+  line-height: 1.6;
+  margin-bottom: 12px;
+  font-size: var(--dv-font-size);
+}
+
+.dv-dev-toggle {
+  background: transparent;
+  border: none;
+  color: var(--dv-primary);
+  font-size: var(--dv-font-size);
+  font-weight: bold;
+  cursor: pointer;
+  padding: 8px 16px;
+  margin-top: 4px;
+}
+
+.dv-dev-toggle:active {
+  opacity: 0.7;
+}
+
+/* ==========================================================================
+   NOTIFICATION ENGINE
    ========================================================================== */
 .dv-notification-layer {
   position: fixed;
@@ -570,7 +668,6 @@ body {
   pointer-events: auto;
 }
 
-/* Toast */
 #dv-toast {
   background-color: var(--dv-toast-bg);
   color: #FFFFFF;
@@ -583,7 +680,6 @@ body {
   box-shadow: var(--dv-shadow-md);
 }
 
-/* Alert Modal */
 #dv-alert {
   background-color: var(--dv-bg-main);
   border: 1px solid var(--dv-border);
@@ -601,7 +697,6 @@ body {
   font-size: var(--dv-font-size);
 }
 
-/* Loader */
 .dv-spinner {
   width: 50px;
   height: 50px;
@@ -624,23 +719,19 @@ body {
   100% { stroke-dasharray: 90, 150; stroke-dashoffset: -124; }
 }
 
-/* Reduced motion: respect user preference */
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
+  *, *::before, *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
-  .dv-spinner,
-  .dv-recording {
+  .dv-spinner, .dv-recording, .dv-dev-avatar-ring {
     animation: none !important;
   }
 }
 
 /* ==========================================================================
-   DV ADMIN PANEL (More Tab)
+   ADMIN PANEL
    ========================================================================== */
 .dv-admin-panel {
   padding: 24px;
