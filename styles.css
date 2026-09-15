@@ -1,0 +1,526 @@
+/* ==========================================================================
+   DV-MISSION APP - CORE STYLESHEET
+   Strict Mobile PWA Architecture (100dvw / 100dvh)
+   ========================================================================== */
+
+/* DV CSS VARIABLES (Theming Engine) */
+:root {
+  /* Default Light Mode (Facebook Branding) */
+  --dv-primary: #1877F2; 
+  --dv-bg-main: #FFFFFF;
+  --dv-bg-surface: #F0F2F5; /* Slightly offset for input areas/chat bg */
+  --dv-text-main: #000000;
+  --dv-text-muted: #65676B;
+  --dv-border: #E4E6EB;
+  
+  /* Chat Bubbles */
+  --dv-bubble-in: #F0F2F5;
+  --dv-bubble-in-text: #000000;
+  --dv-bubble-out: #1877F2;
+  --dv-bubble-out-text: #FFFFFF;
+  
+  /* Dynamic Typography */
+  --dv-font-size: 18px;
+}
+
+/* DV DARK MODE OVERRIDES */
+body.dv-dark-mode {
+  --dv-bg-main: #000000;
+  --dv-bg-surface: #18191A;
+  --dv-text-main: #FFFFFF;
+  --dv-text-muted: #B0B3B8;
+  --dv-border: #3A3B3C;
+  
+  --dv-bubble-in: #3A3B3C;
+  --dv-bubble-in-text: #FFFFFF;
+}
+
+/* ==========================================================================
+   DV BASE ARCHITECTURE
+   ========================================================================== */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  width: 100dvw;
+  height: 100dvh;
+  overflow: hidden;
+  background-color: var(--dv-bg-main);
+  color: var(--dv-text-main);
+  font-size: var(--dv-font-size);
+  overscroll-behavior: none;
+}
+
+/* Icons */
+.dv-icon {
+  width: 24px;
+  height: 24px;
+  fill: currentColor;
+  display: inline-block;
+}
+
+.dv-hidden {
+  display: none !important;
+}
+
+/* ==========================================================================
+   DV LAYOUT SKELETON
+   ========================================================================== */
+#dv-app-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+}
+
+/* Header */
+#dv-header {
+  height: 60px;
+  background-color: var(--dv-primary);
+  color: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  flex-shrink: 0;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  z-index: 10;
+}
+
+.dv-icon-btn {
+  background: transparent;
+  border: none;
+  color: #FFFFFF;
+  padding: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#dv-header-title {
+  font-weight: bold;
+  font-size: calc(var(--dv-font-size) + 2px);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Main Content Area */
+#dv-content-area {
+  flex-grow: 1;
+  position: relative;
+  background-color: var(--dv-bg-main);
+  overflow: hidden; /* Tabs handle their own scrolling */
+}
+
+/* Tabs */
+.dv-tab {
+  display: none;
+  position: absolute;
+  inset: 0;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+.dv-active-tab {
+  display: flex;
+}
+
+/* Bottom Navigation */
+#dv-bottom-nav {
+  height: 65px;
+  background-color: var(--dv-bg-main);
+  display: flex;
+  border-top: 1px solid var(--dv-border);
+  flex-shrink: 0;
+  padding-bottom: env(safe-area-inset-bottom); /* iOS safe area */
+  z-index: 10;
+}
+
+.dv-nav-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: var(--dv-text-muted);
+  cursor: pointer;
+}
+
+.dv-nav-item.dv-active {
+  color: var(--dv-primary);
+}
+
+.dv-nav-label {
+  font-size: 12px;
+  margin-top: 4px;
+  font-weight: 500;
+}
+
+/* ==========================================================================
+   DV COMPONENTS (Buttons, Inputs, Cards)
+   ========================================================================== */
+.dv-btn {
+  padding: 14px 24px;
+  border: none;
+  border-radius: 8px;
+  font-size: var(--dv-font-size);
+  font-weight: bold;
+  cursor: pointer;
+  text-align: center;
+  width: 100%;
+}
+
+.dv-btn-primary {
+  background-color: var(--dv-primary);
+  color: #FFFFFF;
+}
+
+.dv-input {
+  width: 100%;
+  padding: 14px;
+  font-size: var(--dv-font-size);
+  border: 1px solid var(--dv-border);
+  border-radius: 8px;
+  background-color: var(--dv-bg-surface);
+  color: var(--dv-text-main);
+  outline: none;
+  margin-bottom: 16px;
+}
+
+.dv-input:focus {
+  border-color: var(--dv-primary);
+}
+
+/* Hero / Auth Box */
+.dv-hero-card, .dv-auth-box {
+  padding: 24px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  height: 100%;
+}
+
+.dv-hero-title, .dv-auth-title {
+  color: var(--dv-primary);
+  margin-bottom: 12px;
+}
+
+.dv-hero-tagline, .dv-auth-desc {
+  color: var(--dv-text-muted);
+  margin-bottom: 24px;
+}
+
+/* ==========================================================================
+   DV CHAT UI
+   ========================================================================== */
+.dv-chat-layout {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.dv-chat-list {
+  flex-grow: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background-color: var(--dv-bg-main);
+}
+
+.dv-msg-row {
+  display: flex;
+  width: 100%;
+}
+
+.dv-msg-out {
+  justify-content: flex-end;
+}
+
+.dv-bubble {
+  max-width: 85%;
+  padding: 10px 14px;
+  border-radius: 16px;
+  word-wrap: break-word;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+.dv-msg-row:not(.dv-msg-out) .dv-bubble {
+  background-color: var(--dv-bubble-in);
+  color: var(--dv-bubble-in-text);
+  border-top-left-radius: 4px;
+}
+
+.dv-msg-out .dv-bubble {
+  background-color: var(--dv-bubble-out);
+  color: var(--dv-bubble-out-text);
+  border-top-right-radius: 4px;
+}
+
+.dv-sender-name {
+  font-size: calc(var(--dv-font-size) - 4px);
+  font-weight: bold;
+  color: var(--dv-primary);
+  margin-bottom: 4px;
+}
+
+.dv-msg-out .dv-sender-name {
+  display: none;
+}
+
+/* Chat Input Area */
+.dv-chat-input-area {
+  display: flex;
+  padding: 8px 12px;
+  background-color: var(--dv-bg-main);
+  align-items: flex-end;
+  gap: 8px;
+  border-top: 1px solid var(--dv-border);
+}
+
+.dv-chat-input {
+  flex-grow: 1;
+  min-height: 48px;
+  max-height: 120px;
+  border-radius: 24px;
+  border: 1px solid var(--dv-border);
+  padding: 12px 16px;
+  background-color: var(--dv-bg-surface);
+  color: var(--dv-text-main);
+  font-size: var(--dv-font-size);
+  outline: none;
+}
+
+.dv-action-btn {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: none;
+  background-color: var(--dv-primary);
+  color: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.dv-recording {
+  background-color: #FF3B30 !important;
+  animation: dv-pulse 1.2s infinite;
+}
+
+@keyframes dv-pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
+
+/* Inline Audio Player */
+.dv-audio-player {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 160px;
+}
+
+.dv-audio-play-btn {
+  background: transparent;
+  border: none;
+  color: inherit;
+  padding: 4px;
+  cursor: pointer;
+}
+
+/* ==========================================================================
+   DV SIDEBARS (Slide Over)
+   ========================================================================== */
+.dv-sidebar-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: transparent; /* No dimming per requirements */
+  z-index: 100;
+}
+
+.dv-sidebar {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  width: 280px;
+  background-color: var(--dv-bg-main);
+  z-index: 101;
+  overflow-y: auto;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  flex-direction: column;
+}
+
+.dv-sidebar-left {
+  left: 0;
+  transform: translateX(-100%);
+  border-right: 1px solid var(--dv-border);
+}
+
+.dv-sidebar-right {
+  right: 0;
+  transform: translateX(100%);
+  border-left: 1px solid var(--dv-border);
+}
+
+.dv-sidebar.dv-open {
+  transform: translateX(0);
+}
+
+.dv-sidebar-header {
+  padding: 24px 16px;
+  background-color: var(--dv-primary);
+  color: #FFFFFF;
+  font-weight: bold;
+  font-size: calc(var(--dv-font-size) + 2px);
+}
+
+.dv-menu-item {
+  padding: 16px;
+  border-bottom: 1px solid var(--dv-border);
+  cursor: pointer;
+  font-size: var(--dv-font-size);
+  color: var(--dv-text-main);
+}
+
+.dv-no-click {
+  cursor: default;
+}
+
+.dv-font-control {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* ==========================================================================
+   DV EDGE-TO-EDGE MODAL (100dvw x 100dvh)
+   ========================================================================== */
+.dv-edge-modal {
+  position: fixed;
+  inset: 0; /* Top, Right, Bottom, Left = 0 */
+  background-color: var(--dv-bg-main);
+  z-index: 200; /* Above everything else */
+  transform: translateX(100%);
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  flex-direction: column;
+}
+
+.dv-edge-modal.dv-open {
+  transform: translateX(0);
+}
+
+.dv-modal-content {
+  flex-grow: 1;
+  overflow-y: auto;
+  padding: 24px;
+}
+
+/* ==========================================================================
+   DV NOTIFICATION ENGINE (Strictly Centered, Zero Blur, Zero Gray)
+   ========================================================================== */
+.dv-notification-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none; /* Let clicks pass through empty areas */
+}
+
+.dv-center-element {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: auto; /* Re-enable clicks on the element itself */
+}
+
+/* Toast */
+#dv-toast {
+  background-color: #323232; /* Standard Android Toast color */
+  color: #FFFFFF;
+  padding: 12px 24px;
+  border-radius: 24px;
+  font-size: calc(var(--dv-font-size) - 2px);
+  text-align: center;
+  white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+/* Alert Modal */
+#dv-alert {
+  background-color: var(--dv-bg-main);
+  border: 1px solid var(--dv-border);
+  padding: 24px;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+  text-align: center;
+  min-width: 280px;
+  max-width: 90%;
+}
+
+.dv-alert-text {
+  margin-bottom: 24px;
+  color: var(--dv-text-main);
+  font-size: var(--dv-font-size);
+}
+
+/* Loader */
+.dv-spinner {
+  width: 50px;
+  height: 50px;
+  animation: dv-rotate 2s linear infinite;
+}
+
+.dv-spinner .dv-path {
+  stroke: var(--dv-primary);
+  stroke-linecap: round;
+  animation: dv-dash 1.5s ease-in-out infinite;
+}
+
+@keyframes dv-rotate {
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes dv-dash {
+  0% { stroke-dasharray: 1, 150; stroke-dashoffset: 0; }
+  50% { stroke-dasharray: 90, 150; stroke-dashoffset: -35; }
+  100% { stroke-dasharray: 90, 150; stroke-dashoffset: -124; }
+}
+
+/* ==========================================================================
+   DV ADMIN PANEL (More Tab)
+   ========================================================================== */
+.dv-admin-panel {
+  padding: 24px;
+}
+
+.dv-admin-title {
+  color: var(--dv-primary);
+  margin: 24px 0 12px 0;
+}
+
+.dv-ticker-box {
+  background-color: var(--dv-bg-surface);
+  border: 1px solid var(--dv-border);
+  padding: 16px;
+  border-radius: 8px;
+  font-style: italic;
+  color: var(--dv-text-muted);
+}
