@@ -6,6 +6,7 @@
 // DV Global Application State
 const DV_STATE = {
   pin: "",
+  name: "",          // NEW: needed to identify "self" when rendering bubbles
   role: "guest",
   micAllowed: true,
   lastSyncGroup: 0,
@@ -27,24 +28,30 @@ let DV_RECORD_TIMEOUT = null;
 document.addEventListener("DOMContentLoaded", () => {
   // 1. Initialize Local Database
   dvInitDatabase(() => {
-    dvLoadMessagesFromLocal("dv_group_chats", (msgs) => msgs.forEach(m => dvRenderBubble(m, "group")));
-    dvLoadMessagesFromLocal("dv_private_chats", (msgs) => msgs.forEach(m => dvRenderBubble(m, "private")));
+    dvLoadMessagesFromLocal("dv_group_chats", (msgs) => {
+      msgs.forEach(m => dvRenderBubble(m, "group"));
+      dvScrollChatToBottom("dv-group-msgs");
+    });
+    dvLoadMessagesFromLocal("dv_private_chats", (msgs) => {
+      msgs.forEach(m => dvRenderBubble(m, "private"));
+      dvScrollChatToBottom("dv-private-msgs");
+    });
   });
 
   // 2. Setup Header & Sidebar Listeners
   document.getElementById("dv-btn-left-menu").addEventListener("click", () => dvToggleSidebar("dv-left-sidebar"));
   document.getElementById("dv-btn-right-menu").addEventListener("click", () => dvToggleSidebar("dv-right-sidebar"));
   document.getElementById("dv-sidebar-overlay").addEventListener("click", dvCloseSidebars);
-  
+
   document.getElementById("dv-btn-exit-left").addEventListener("click", dvCloseSidebars);
   document.getElementById("dv-btn-exit-right").addEventListener("click", dvCloseSidebars);
-  
+
   // 3. Setup Bottom Navigation Logic
   document.querySelectorAll(".dv-nav-item").forEach(btn => {
     btn.addEventListener("click", (e) => dvSwitchTab(e.currentTarget));
   });
 
-  // 4. Setup Modal Triggers (Data Attributes)
+  // 4. Setup Modal Triggers
   document.querySelectorAll("[data-modal]").forEach(item => {
     item.addEventListener("click", (e) => dvOpenEdgeModal(e.currentTarget.getAttribute("data-modal")));
   });
@@ -56,21 +63,32 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // 6. Authentication & Action Buttons
   document.getElementById("dv-btn-login").addEventListener("click", dvVerifyPin);
-  
+
+  // Allow Enter key to submit PIN
+  document.getElementById("dv-pin-input").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") { e.preventDefault(); dvVerifyPin(); }
+  });
+
   // Group Chat Buttons
   document.getElementById("dv-group-send").addEventListener("click", () => dvSendTextMessage("group"));
   document.getElementById("dv-group-mic").addEventListener("click", () => dvToggleMicrophone("group"));
-  
+  document.getElementById("dv-group-input").addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); dvSendTextMessage("group"); }
+  });
+
   // Private Chat Buttons (Admin)
   document.getElementById("dv-private-send").addEventListener("click", () => dvSendTextMessage("private"));
   document.getElementById("dv-private-mic").addEventListener("click", () => dvToggleMicrophone("private"));
+  document.getElementById("dv-private-input").addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); dvSendTextMessage("private"); }
+  });
 
   // Control Center
   document.getElementById("dv-btn-ticker").addEventListener("click", dvPushTicker);
 });
 
 /* ==========================================================================
-   DV NOTIFICATION ENGINE (Strictly Centered, No Blur)
+   DV NOTIFICATION ENGINE
    ========================================================================== */
 
 function dvShowLoader() {
@@ -83,16 +101,16 @@ function dvHideLoader() {
 
 function dvShowToast(message) {
   const toast = document.getElementById("dv-toast");
-  document.getElementById("dv-toast-msg").innerText = message;
+  document.getElementById("dv-toast-msg").textContent = message;
   toast.classList.remove("dv-hidden");
-  setTimeout(() => toast.classList.add("dv-hidden"), 3000);
+  clearTimeout(toast._dvTimer);
+  toast._dvTimer = setTimeout(() => toast.classList.add("dv-hidden"), 3000);
 }
 
 function dvShowAlert(message) {
   const alertBox = document.getElementById("dv-alert");
-  document.getElementById("dv-alert-msg").innerText = message;
+  document.getElementById("dv-alert-msg").textContent = message;
   alertBox.classList.remove("dv-hidden");
-  
   document.getElementById("dv-btn-close-alert").onclick = () => {
     alertBox.classList.add("dv-hidden");
   };
@@ -103,52 +121,108 @@ function dvShowAlert(message) {
    ========================================================================== */
 
 function dvSwitchTab(btnElement) {
-  // Hide all tabs
   document.querySelectorAll(".dv-tab").forEach(tab => tab.classList.remove("dv-active-tab"));
-  document.querySelectorAll(".dv-nav-item").forEach(nav => nav.classList.remove("dv-active"));
-  
-  // Show target tab
+  document.querySelectorAll(".dv-nav-item").forEach(nav => {
+    nav.classList.remove("dv-active");
+    nav.removeAttribute("aria-current");
+  });
+
   const targetId = btnElement.getAttribute("data-target");
   document.getElementById(targetId).classList.add("dv-active-tab");
   btnElement.classList.add("dv-active");
+  btnElement.setAttribute("aria-current", "page");
 }
 
 function dvToggleSidebar(sidebarId) {
-  document.getElementById("dv-sidebar-overlay").style.display = "block";
-  document.getElementById(sidebarId).classList.add("dv-open");
+  const overlay = document.getElementById("dv-sidebar-overlay");
+  const sidebar = document.getElementById(sidebarId);
+
+  // If already open, close
+  if (sidebar.classList.contains("dv-open")) {
+    dvCloseSidebars();
+    return;
+  }
+
+  // Close both first, then open the requested one
+  document.getElementById("dv-left-sidebar").classList.remove("dv-open");
+  document.getElementById("dv-right-sidebar").classList.remove("dv-open");
+
+  overlay.classList.add("dv-open");
+  sidebar.classList.add("dv-open");
+  sidebar.setAttribute("aria-hidden", "false");
 }
 
 function dvCloseSidebars() {
-  document.getElementById("dv-sidebar-overlay").style.display = "none";
-  document.getElementById("dv-left-sidebar").classList.remove("dv-open");
-  document.getElementById("dv-right-sidebar").classList.remove("dv-open");
+  const overlay = document.getElementById("dv-sidebar-overlay");
+  const left = document.getElementById("dv-left-sidebar");
+  const right = document.getElementById("dv-right-sidebar");
+
+  overlay.classList.remove("dv-open");
+  left.classList.remove("dv-open");
+  right.classList.remove("dv-open");
+  left.setAttribute("aria-hidden", "true");
+  right.setAttribute("aria-hidden", "true");
 }
 
-function dvOpenEdgeModal(title) {
-  dvCloseSidebars(); // Close sidebars if open
-  document.getElementById("dv-modal-title").innerText = title;
-  
-  // Inject basic content based on title
+function dvOpenEdgeModal(key) {
+  if (!key) return;
+  dvCloseSidebars();
+
+  // Derive template ID from the key: "about-us" -> "tpl-about-us"
+  const templateId = "tpl-" + key;
+  const template = document.getElementById(templateId);
+
+  if (!template) {
+    // Fallback if template missing
+    document.getElementById("dv-modal-title").textContent = key;
+    document.getElementById("dv-modal-body").innerHTML = "";
+    document.getElementById("dv-edge-modal").classList.add("dv-open");
+    document.getElementById("dv-edge-modal").setAttribute("aria-hidden", "false");
+    return;
+  }
+
+  // Clone template content
+  const clone = template.content.cloneNode(true);
+
+  // Derive title from the first heading inside the template
+  const heading = template.content.querySelector(".dv-modal-heading");
+  const title = heading ? heading.textContent : key;
+
+  document.getElementById("dv-modal-title").textContent = title;
+
   const body = document.getElementById("dv-modal-body");
-  body.innerHTML = `
-    <h2 style="color: var(--dv-primary); margin-bottom: 16px;">${title}</h2>
-    <p>This is the official edge-to-edge content view for <strong>${title}</strong>.</p>
-  `;
-  
-  document.getElementById("dv-edge-modal").classList.add("dv-open");
+  body.innerHTML = "";
+  body.appendChild(clone);
+
+  const modal = document.getElementById("dv-edge-modal");
+  modal.classList.add("dv-open");
+  modal.setAttribute("aria-hidden", "false");
 }
 
 function dvCloseEdgeModal() {
-  document.getElementById("dv-edge-modal").classList.remove("dv-open");
+  const modal = document.getElementById("dv-edge-modal");
+  modal.classList.remove("dv-open");
+  modal.setAttribute("aria-hidden", "true");
+  // Clear body content after transition so next open starts clean
+  setTimeout(() => {
+    document.getElementById("dv-modal-body").innerHTML = "";
+  }, 300);
 }
 
 function dvToggleTheme() {
-  document.body.classList.toggle("dv-dark-mode");
+  const isDark = document.body.classList.toggle("dv-dark-mode");
+  try { localStorage.setItem("dv-theme", isDark ? "dark" : "light"); } catch (e) {}
   dvCloseSidebars();
 }
 
 function dvUpdateFontSize(size) {
   document.documentElement.style.setProperty("--dv-font-size", `${size}px`);
+  try { localStorage.setItem("dv-font-size", size); } catch (e) {}
+}
+
+function dvScrollChatToBottom(containerId) {
+  const el = document.getElementById(containerId);
+  if (el) el.scrollTop = el.scrollHeight;
 }
 
 /* ==========================================================================
@@ -163,27 +237,36 @@ async function dvVerifyPin() {
   }
 
   dvShowLoader();
-  const response = await dvNetworkPost({ action: "syncState", pin: pinInput, lastSyncTime: 0 });
+  let response;
+  try {
+    response = await dvNetworkPost({ action: "syncState", pin: pinInput, lastSyncTime: 0 });
+  } catch (err) {
+    dvHideLoader();
+    dvShowAlert("Cannot reach server. Check your connection.");
+    return;
+  }
   dvHideLoader();
 
-  if (!response.ok) {
-    dvShowAlert(response.error);
+  if (!response || !response.ok) {
+    dvShowAlert((response && response.error) || "Authentication failed.");
     return;
   }
 
-  // Auth Success - Update State
   DV_STATE.pin = pinInput;
   DV_STATE.role = response.role;
   DV_STATE.micAllowed = response.micEnabled;
+  DV_STATE.name = response.name || (response.role === "admin" ? "Admin" : "User");
 
   // Swap Group Tab UI from PIN Entry to Chat UI
   document.getElementById("dv-pin-container").classList.add("dv-hidden");
   document.getElementById("dv-group-chat-ui").classList.remove("dv-hidden");
 
-  // Dynamic Layout: Unhide Admin Tabs if Applicable
+  // Dynamic Layout: Unhide Admin Tabs
   if (DV_STATE.role === "admin") {
     document.getElementById("dv-nav-chat").classList.remove("dv-hidden");
     document.getElementById("dv-nav-more").classList.remove("dv-hidden");
+    document.getElementById("dv-tab-chat").classList.remove("dv-hidden");
+    document.getElementById("dv-tab-more").classList.remove("dv-hidden");
   }
 
   dvShowToast("Access Granted.");
@@ -196,41 +279,44 @@ async function dvVerifyPin() {
 
 function dvStartPolling() {
   if (DV_STATE.pollTimer) clearInterval(DV_STATE.pollTimer);
-  
-  // Poll every 3 seconds
+
   DV_STATE.pollTimer = setInterval(async () => {
-    // We send the highest lastSync to get only new messages
-    const syncTime = Math.max(DV_STATE.lastSyncGroup, DV_STATE.lastSyncPrivate);
-    
-    const res = await dvNetworkPost({ action: "syncState", pin: DV_STATE.pin, lastSyncTime: syncTime });
-    
-    if (res.ok) {
-      // Process Ticker
-      if (res.ticker) {
-        document.getElementById("dv-live-ticker-display").innerText = res.ticker;
-      }
+    let res;
+    try {
+      res = await dvNetworkPost({
+        action: "syncState",
+        pin: DV_STATE.pin,
+        lastSyncTime: DV_STATE.lastSyncGroup,
+        lastSyncPrivate: DV_STATE.lastSyncPrivate
+      });
+    } catch (err) {
+      return; // silent on network failure; next tick retries
+    }
 
-      // Process Public Messages
-      if (res.publicMessages) {
-        res.publicMessages.forEach(msg => {
-          if (msg.time > DV_STATE.lastSyncGroup) {
-            dvRenderBubble(msg, "group");
-            dvSaveMessageToLocal("dv_group_chats", msg);
-            DV_STATE.lastSyncGroup = msg.time;
-          }
-        });
-      }
+    if (!res || !res.ok) return;
 
-      // Process Private Messages (Admin only)
-      if (res.privateMessages && DV_STATE.role === "admin") {
-        res.privateMessages.forEach(msg => {
-          if (msg.time > DV_STATE.lastSyncPrivate) {
-            dvRenderBubble(msg, "private");
-            dvSaveMessageToLocal("dv_private_chats", msg);
-            DV_STATE.lastSyncPrivate = msg.time;
-          }
-        });
-      }
+    if (res.ticker) {
+      document.getElementById("dv-live-ticker-display").textContent = res.ticker;
+    }
+
+    if (res.publicMessages && res.publicMessages.length) {
+      res.publicMessages.forEach(msg => {
+        if (msg.time > DV_STATE.lastSyncGroup) {
+          dvRenderBubble(msg, "group");
+          dvSaveMessageToLocal("dv_group_chats", msg);
+          DV_STATE.lastSyncGroup = msg.time;
+        }
+      });
+    }
+
+    if (res.privateMessages && DV_STATE.role === "admin" && res.privateMessages.length) {
+      res.privateMessages.forEach(msg => {
+        if (msg.time > DV_STATE.lastSyncPrivate) {
+          dvRenderBubble(msg, "private");
+          dvSaveMessageToLocal("dv_private_chats", msg);
+          DV_STATE.lastSyncPrivate = msg.time;
+        }
+      });
     }
   }, 3000);
 }
@@ -238,42 +324,54 @@ function dvStartPolling() {
 function dvRenderBubble(msg, roomType) {
   const containerId = roomType === "group" ? "dv-group-msgs" : "dv-private-msgs";
   const container = document.getElementById(containerId);
-  
-  // Prevent duplicate rendering
+
   if (document.getElementById(`dv-msg-${msg.id}`)) return;
 
-  // Determine if incoming or outgoing
-  const isSelf = (DV_STATE.role === "admin" && msg.sender === "Admin") || 
-                 (DV_STATE.role === "user" && msg.sender !== "Admin"); // Simplification for demo logic
+  // Correct self-detection: compare sender to the authenticated user's own name
+  const isSelf = msg.sender === DV_STATE.name;
 
   const row = document.createElement("div");
   row.id = `dv-msg-${msg.id}`;
-  row.className = `dv-msg-row ${isSelf ? "dv-msg-out" : ""}`;
+  row.className = `dv-msg-row ${isSelf ? "dv-msg-out" : "dv-msg-in"}`;
 
-  let contentHtml = msg.content;
+  const bubble = document.createElement("div");
+  bubble.className = "dv-bubble";
 
-  // Render Inline Audio Player for AUDIO types
+  const senderEl = document.createElement("div");
+  senderEl.className = "dv-sender-name";
+  senderEl.textContent = msg.sender;
+  bubble.appendChild(senderEl);
+
+  const textEl = document.createElement("div");
+  textEl.className = "dv-msg-text";
+
   if (msg.type === "AUDIO") {
-    contentHtml = `
-      <div class="dv-audio-player">
-        <button class="dv-audio-play-btn" onclick="dvPlayAudio('${msg.content}')">
-          <svg class="dv-icon" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-        </button>
-        <span style="font-size: 14px;">Voice Note</span>
-      </div>
-    `;
+    // Build audio player with event listener (not inline onclick)
+    const player = document.createElement("div");
+    player.className = "dv-audio-player";
+
+    const playBtn = document.createElement("button");
+    playBtn.className = "dv-audio-play-btn";
+    playBtn.setAttribute("aria-label", "Play voice note");
+    playBtn.innerHTML = '<svg class="dv-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>';
+    playBtn.addEventListener("click", () => dvPlayAudio(msg.content));
+    player.appendChild(playBtn);
+
+    const label = document.createElement("span");
+    label.style.fontSize = "14px";
+    label.textContent = "Voice Note";
+    player.appendChild(label);
+
+    textEl.appendChild(player);
+  } else {
+    // Use textContent to prevent XSS from message content
+    textEl.textContent = msg.content;
   }
 
-  row.innerHTML = `
-    <div class="dv-bubble">
-      <div class="dv-sender-name">${msg.sender}</div>
-      <div class="dv-msg-text">${contentHtml}</div>
-    </div>
-  `;
-
+  bubble.appendChild(textEl);
+  row.appendChild(bubble);
   container.appendChild(row);
-  
-  // Auto-scroll to bottom
+
   container.scrollTop = container.scrollHeight;
 }
 
@@ -284,30 +382,42 @@ function dvRenderBubble(msg, roomType) {
 async function dvSendTextMessage(roomType) {
   const inputEl = document.getElementById(`dv-${roomType}-input`);
   const text = inputEl.value.trim();
-  
+
   if (!text) return;
-  inputEl.value = ""; // Clear input immediately
+  if (text.length > 2500) {
+    dvShowToast("Message too long (2500 character limit).");
+    return;
+  }
 
   dvShowLoader();
-  const res = await dvNetworkPost({ 
-    action: "sendMessage", 
-    pin: DV_STATE.pin,
-    text: text,
-    isPrivate: (roomType === "private") 
-  });
+  let res;
+  try {
+    res = await dvNetworkPost({
+      action: "sendMessage",
+      pin: DV_STATE.pin,
+      text: text,
+      isPrivate: (roomType === "private")
+    });
+  } catch (err) {
+    dvHideLoader();
+    dvShowToast("Message failed to send. Check connection.");
+    return;
+  }
   dvHideLoader();
 
-  if (!res.ok) dvShowToast(res.error);
+  if (res && res.ok) {
+    inputEl.value = ""; // Clear ONLY on success
+  } else {
+    dvShowToast((res && res.error) || "Message failed to send.");
+  }
 }
 
-// MediaRecorder Logic (Strict 10s max)
 async function dvToggleMicrophone(roomType) {
   if (!DV_STATE.micAllowed) {
     dvShowAlert("Your microphone privileges have been disabled by the Administrator.");
     return;
   }
 
-  // If already recording, clicking again stops and sends
   if (DV_STATE.isRecording && DV_STATE.recordTarget === roomType) {
     dvStopRecording();
     return;
@@ -318,21 +428,20 @@ async function dvToggleMicrophone(roomType) {
     DV_STATE.recordTarget = roomType;
     DV_STATE.isRecording = true;
     DV_AUDIO_CHUNKS = [];
-    
+
     DV_MEDIA_RECORDER = new MediaRecorder(stream);
-    
+
     DV_MEDIA_RECORDER.ondataavailable = e => {
       if (e.data.size > 0) DV_AUDIO_CHUNKS.push(e.data);
     };
-    
+
     DV_MEDIA_RECORDER.onstop = () => dvProcessAndUploadAudio(roomType);
-    
+
     const micBtn = document.getElementById(`dv-${roomType}-mic`);
     micBtn.classList.add("dv-recording");
-    
+
     DV_MEDIA_RECORDER.start();
 
-    // Strict 10-Second Cutoff
     DV_RECORD_TIMEOUT = setTimeout(() => {
       if (DV_STATE.isRecording) {
         dvShowToast("10 second limit reached.");
@@ -348,48 +457,70 @@ async function dvToggleMicrophone(roomType) {
 function dvStopRecording() {
   if (DV_MEDIA_RECORDER && DV_MEDIA_RECORDER.state !== "inactive") {
     DV_MEDIA_RECORDER.stop();
-    // Stop all audio tracks to turn off the recording indicator in the browser
     DV_MEDIA_RECORDER.stream.getTracks().forEach(track => track.stop());
   }
-  
+
   clearTimeout(DV_RECORD_TIMEOUT);
   DV_STATE.isRecording = false;
-  
+
   const micBtn = document.getElementById(`dv-${DV_STATE.recordTarget}-mic`);
   if (micBtn) micBtn.classList.remove("dv-recording");
 }
 
 function dvProcessAndUploadAudio(roomType) {
   const blob = new Blob(DV_AUDIO_CHUNKS, { type: 'audio/webm' });
+
+  // Size guard — backend caps at 3MB base64, ~2.2MB raw
+  if (blob.size > 2000000) {
+    dvShowToast("Recording too large. Try a shorter clip.");
+    return;
+  }
+
   const reader = new FileReader();
-  
+
   reader.readAsDataURL(blob);
   reader.onloadend = async () => {
     dvShowLoader();
-    const res = await dvNetworkPost({ 
-      action: "sendAudio", 
-      pin: DV_STATE.pin,
-      audioBase64: reader.result,
-      isPrivate: (roomType === "private")
-    });
+    let res;
+    try {
+      res = await dvNetworkPost({
+        action: "sendAudio",
+        pin: DV_STATE.pin,
+        audioBase64: reader.result,
+        isPrivate: (roomType === "private")
+      });
+    } catch (err) {
+      dvHideLoader();
+      dvShowToast("Voice note failed to send.");
+      return;
+    }
     dvHideLoader();
-    
-    if (!res.ok) dvShowToast(res.error);
+
+    if (!res || !res.ok) {
+      dvShowToast((res && res.error) || "Voice note failed to send.");
+    }
   };
 }
 
 async function dvPlayAudio(audioId) {
   dvShowLoader();
-  const res = await dvNetworkPost({ 
-    action: "getAudio", 
-    pin: DV_STATE.pin, 
-    audioId: audioId 
-  });
+  let res;
+  try {
+    res = await dvNetworkPost({
+      action: "getAudio",
+      pin: DV_STATE.pin,
+      audioId: audioId
+    });
+  } catch (err) {
+    dvHideLoader();
+    dvShowAlert("Could not reach server for audio.");
+    return;
+  }
   dvHideLoader();
 
-  if (res.ok && res.audioBase64) {
+  if (res && res.ok && res.audioBase64) {
     const audio = new Audio(res.audioBase64);
-    audio.play();
+    audio.play().catch(() => dvShowAlert("Playback failed."));
   } else {
     dvShowAlert("Audio file could not be retrieved or has been deleted.");
   }
@@ -400,21 +531,33 @@ async function dvPlayAudio(audioId) {
    ========================================================================== */
 
 async function dvPushTicker() {
+  if (DV_STATE.role !== "admin") {
+    dvShowAlert("Admin privileges required.");
+    return;
+  }
+
   const tickerInput = document.getElementById("dv-ticker-input").value.trim();
   if (!tickerInput) return dvShowToast("Ticker cannot be empty.");
 
   dvShowLoader();
-  const res = await dvNetworkPost({ 
-    action: "adminUpdateTicker", 
-    pin: DV_STATE.pin, 
-    ticker: tickerInput 
-  });
+  let res;
+  try {
+    res = await dvNetworkPost({
+      action: "adminUpdateTicker",
+      pin: DV_STATE.pin,
+      ticker: tickerInput
+    });
+  } catch (err) {
+    dvHideLoader();
+    dvShowToast("Ticker update failed.");
+    return;
+  }
   dvHideLoader();
 
-  if (res.ok) {
+  if (res && res.ok) {
     dvShowToast("Ticker updated successfully.");
     document.getElementById("dv-ticker-input").value = "";
   } else {
-    dvShowAlert(res.error);
+    dvShowAlert((res && res.error) || "Ticker update failed.");
   }
 }
