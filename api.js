@@ -4,7 +4,7 @@
    ========================================================================== */
 
 const DV_CONFIG = {
-  // IMPORTANT: Replace this with your actual Google Apps Script Web App URL
+  // IMPORTANT: Replace this with your deployed Google Apps Script Web App URL
   API_URL: "YOUR_GAS_WEB_APP_URL_HERE",
   DB_NAME: "DVMissionDatabase",
   DB_VERSION: 1,
@@ -15,8 +15,7 @@ const DV_CONFIG = {
 let DV_DB = null;
 
 /* ==========================================================================
-   DV CONFIGURATION GUARD
-   Fails loudly at load time if the GAS URL is still the placeholder.
+   CONFIGURATION GUARD
    ========================================================================== */
 
 (function dvCheckConfig() {
@@ -29,7 +28,7 @@ let DV_DB = null;
 })();
 
 /* ==========================================================================
-   DV INDEXEDDB STORAGE (Offline Persistence)
+   INDEXEDDB STORAGE
    ========================================================================== */
 
 function dvInitDatabase(onSuccessCallback) {
@@ -93,7 +92,6 @@ function dvLoadMessagesFromLocal(storeName, callback) {
 
     dvRequest.onsuccess = () => {
       const rows = dvRequest.result || [];
-      // Sort numerically by time — IndexedDB string keys don't sort as numbers
       rows.sort((a, b) => (a.time || 0) - (b.time || 0));
       if (callback) callback(rows);
     };
@@ -109,19 +107,15 @@ function dvLoadMessagesFromLocal(storeName, callback) {
 }
 
 /* ==========================================================================
-   DV NETWORK ENGINE (Secure POST to GAS)
+   NETWORK ENGINE
    ========================================================================== */
 
 /**
- * Sends data to the GAS backend.
+ * Sends a POST to the GAS backend.
  * Returns the parsed JSON response on success.
  * Returns { ok: false, code, error } on any failure mode.
- *
- * Failure modes are logged to console for debugging but always
- * surface a single friendly message to the caller.
  */
 async function dvNetworkPost(payload) {
-  // Guard against the placeholder URL never being replaced
   if (!DV_CONFIG.API_URL || DV_CONFIG.API_URL.indexOf("YOUR_GAS") === 0) {
     return {
       ok: false,
@@ -145,10 +139,6 @@ async function dvNetworkPost(payload) {
       redirect: "follow"
     });
 
-    // GAS always returns HTTP 200 with a JSON body, even for auth failures.
-    // If we get anything else, something upstream (proxy, redirect, cold-start
-    // error page) is interfering. Try to parse anyway, because GAS sometimes
-    // returns 302 -> 200 with a valid body.
     let data;
     try {
       data = await response.json();
