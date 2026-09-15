@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#1877F2">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>DV-Mission App</title>
+  
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="dv-light-mode">
+
+  <!-- DV MAIN APP SHELL -->
+  <div id="dv-app-shell">
+    
+    <!-- DV HEADER -->
+    <header id="dv-header">
+      <button class="dv-icon-btn" id="dv-btn-left-menu" aria-label="Open Info Menu">
+        <svg class="dv-icon" viewBox="0 0 24 24"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>
+      </button>
+      <div id="dv-header-title">DV-Mission</div>
+      <button class="dv-icon-btn" id="dv-btn-right-menu" aria-label="Open Settings">
+        <svg class="dv-icon" viewBox="0 0 24 24"><path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></svg>
+      </button>
+    </header>
+
+    <!-- DV CONTENT AREA (TABS) -->
+    <main id="dv-content-area">
+      
+      <!-- TAB 1: HOME (Ungated - Visible to All) -->
+      <section id="dv-tab-home" class="dv-tab dv-active-tab">
+        <div class="dv-hero-card">
+          <h1 class="dv-hero-title">DV-Mission App</h1>
+          <p class="dv-hero-tagline">Connecting the mission, securely and directly.</p>
+        </div>
+      </section>
+
+      <!-- TAB 2: GROUP (Gated Chat Room) -->
+      <section id="dv-tab-group" class="dv-tab">
+        
+        <!-- PIN ENTRY STATE (Visible when tab is clicked before Auth) -->
+        <div id="dv-pin-container" class="dv-auth-box">
+          <h2 class="dv-auth-title">Access Group Chat</h2>
+          <p class="dv-auth-desc">Enter your PIN to join the mission chat.</p>
+          <input type="password" id="dv-pin-input" class="dv-input" placeholder="Enter Access PIN" autocomplete="off">
+          <button id="dv-btn-login" class="dv-btn dv-btn-primary">Verify PIN</button>
+        </div>
+        
+        <!-- CHAT STATE (Hidden until PIN is verified) -->
+        <div id="dv-group-chat-ui" class="dv-chat-layout dv-hidden">
+          <div id="dv-group-msgs" class="dv-chat-list"></div>
+          <div class="dv-chat-input-area">
+            <input type="text" id="dv-group-input" class="dv-chat-input" placeholder="Type a message..." autocomplete="off">
+            <button id="dv-group-mic" class="dv-action-btn">
+              <svg class="dv-icon" viewBox="0 0 24 24"><path d="M12 14c1.66 0 2.99-1.34 2.99-3L15 5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z"/></svg>
+            </button>
+            <button id="dv-group-send" class="dv-action-btn">
+              <svg class="dv-icon" viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 3: CHAT (Private Inbox - Strictly Admin Only) -->
+      <section id="dv-tab-chat" class="dv-tab">
+        <div id="dv-private-chat-ui" class="dv-chat-layout">
+          <div id="dv-private-msgs" class="dv-chat-list"></div>
+          <div class="dv-chat-input-area">
+            <input type="text" id="dv-private-input" class="dv-chat-input" placeholder="Private admin message..." autocomplete="off">
+            <button id="dv-private-mic" class="dv-action-btn">
+               <svg class="dv-icon" viewBox="0 0 24 24"><path d="M12 14c1.66 0 2.99-1.34 2.99-3L15 5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z"/></svg>
+            </button>
+            <button id="dv-private-send" class="dv-action-btn">
+               <svg class="dv-icon" viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 4: MORE (Control Center - Strictly Admin Only) -->
+      <section id="dv-tab-more" class="dv-tab">
+         <div class="dv-admin-panel">
+           <h3 class="dv-admin-title">Control Center</h3>
+           <input type="text" id="dv-ticker-input" class="dv-input" placeholder="New Ticker Message" autocomplete="off">
+           <button id="dv-btn-ticker" class="dv-btn dv-btn-primary">Push Ticker</button>
+           
+           <h3 class="dv-admin-title">Live Ticker</h3>
+           <div id="dv-live-ticker-display" class="dv-ticker-box">Waiting for sync...</div>
+         </div>
+      </section>
+
+    </main>
+
+    <!-- DV BOTTOM NAVIGATION -->
+    <nav id="dv-bottom-nav">
+      <!-- Default Tabs -->
+      <button class="dv-nav-item dv-active" data-target="dv-tab-home">
+        <svg class="dv-icon" viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+        <span class="dv-nav-label">Home</span>
+      </button>
+      <button class="dv-nav-item" data-target="dv-tab-group">
+        <svg class="dv-icon" viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+        <span class="dv-nav-label">Group</span>
+      </button>
+      
+      <!-- Admin Only Tabs (Hidden by default) -->
+      <button class="dv-nav-item dv-hidden" id="dv-nav-chat" data-target="dv-tab-chat">
+        <svg class="dv-icon" viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
+        <span class="dv-nav-label">Chat</span>
+      </button>
+      <button class="dv-nav-item dv-hidden" id="dv-nav-more" data-target="dv-tab-more">
+        <svg class="dv-icon" viewBox="0 0 24 24"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
+        <span class="dv-nav-label">More</span>
+      </button>
+    </nav>
+  </div>
+
+  <!-- DV SIDEBARS (Slide over navigation) -->
+  <div id="dv-sidebar-overlay" class="dv-sidebar-overlay"></div>
+  
+  <!-- Left: Public Info (Ungated) -->
+  <aside id="dv-left-sidebar" class="dv-sidebar dv-sidebar-left">
+    <div class="dv-sidebar-header">Public Info</div>
+    <div class="dv-menu-item" data-modal="About Us">About Us</div>
+    <div class="dv-menu-item" data-modal="About Developer">About Developer</div>
+    <div class="dv-menu-item" data-modal="Our Mission">Our Mission</div>
+    <div class="dv-menu-item" data-modal="Target Goal">Target Goal</div>
+    <div class="dv-menu-item" data-modal="Proprietary Software Notice">Proprietary Notice</div>
+    <div class="dv-menu-item" data-modal="Support Us">Support Us</div>
+    <div class="dv-menu-item" data-modal="Contact Us">Contact Us</div>
+    <div class="dv-menu-item" id="dv-btn-exit-left">Exit</div>
+  </aside>
+
+  <!-- Right: Settings & Utils (Ungated) -->
+  <aside id="dv-right-sidebar" class="dv-sidebar dv-sidebar-right">
+    <div class="dv-sidebar-header">Settings</div>
+    <div class="dv-menu-item" data-modal="Accent Colors">10 Accent Colors</div>
+    <div class="dv-menu-item" data-modal="To-Do List">To-Do List</div>
+    <div class="dv-menu-item dv-no-click">
+      <div class="dv-font-control">
+        <span>Font Size</span>
+        <input type="range" id="dv-font-slider" min="18" max="22" value="18">
+      </div>
+    </div>
+    <div class="dv-menu-item" id="dv-btn-dark-mode">Toggle Dark Mode</div>
+    <div class="dv-menu-item" id="dv-btn-install">Install App</div>
+    <div class="dv-menu-item" id="dv-btn-share">Share App</div>
+    <div class="dv-menu-item" id="dv-btn-exit-right">Exit</div>
+  </aside>
+
+  <!-- DV EDGE-TO-EDGE FULLSCREEN MODAL -->
+  <div id="dv-edge-modal" class="dv-edge-modal">
+    <header id="dv-modal-header" class="dv-header">
+      <button class="dv-icon-btn" id="dv-btn-close-modal">
+        <svg class="dv-icon" viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+      </button>
+      <div id="dv-modal-title" class="dv-header-title">Title</div>
+      <div style="width: 40px;"></div> <!-- Flex spacer -->
+    </header>
+    <div id="dv-modal-body" class="dv-modal-content">
+      <!-- Content dynamically injected via app.js -->
+    </div>
+  </div>
+
+  <!-- DV STRICT CENTER NOTIFICATION ENGINE (NO BLUR, NO GRAY SCREEN) -->
+  <div id="dv-notification-layer" class="dv-notification-layer">
+    
+    <!-- Minor Toast -->
+    <div id="dv-toast" class="dv-center-element dv-hidden">
+      <span id="dv-toast-msg"></span>
+    </div>
+    
+    <!-- Critical Alert Modal -->
+    <div id="dv-alert" class="dv-center-element dv-hidden">
+      <div id="dv-alert-msg" class="dv-alert-text"></div>
+      <button id="dv-btn-close-alert" class="dv-btn dv-btn-primary">OK</button>
+    </div>
+    
+    <!-- API Lifecycle Loader (Spinning SVG) -->
+    <div id="dv-loader" class="dv-center-element dv-hidden">
+      <svg class="dv-spinner" viewBox="0 0 50 50">
+        <circle class="dv-path" cx="25" cy="25" r="20" fill="none" stroke-width="4"></circle>
+      </svg>
+    </div>
+
+  </div>
+
+  <!-- DV EXTERNAL SCRIPTS (Modular Logic) -->
+  <script src="api.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
