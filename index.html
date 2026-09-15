@@ -15,28 +15,24 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
   <link rel="stylesheet" href="styles.css">
 
-  <!-- Pre-paint theme restoration: prevents flash of light mode on dark-mode users -->
   <script>
     (function () {
       try {
-        var savedTheme = localStorage.getItem('dv-theme');
-        if (savedTheme === 'dark') {
-          document.documentElement.classList.add('dv-dark-mode');
+        if (localStorage.getItem("dv-theme") === "dark") {
+          document.documentElement.classList.add("dv-dark-mode");
         }
-        var savedFont = localStorage.getItem('dv-font-size');
+        var savedFont = localStorage.getItem("dv-font-size");
         if (savedFont) {
-          document.documentElement.style.setProperty('--dv-font-size', savedFont + 'px');
+          document.documentElement.style.setProperty("--dv-font-size", savedFont + "px");
         }
-      } catch (e) { /* localStorage unavailable — silent fallback */ }
+      } catch (e) {}
     })();
   </script>
 </head>
 <body class="dv-light-mode">
 
-  <!-- DV MAIN APP SHELL -->
   <div id="dv-app-shell">
 
-    <!-- DV HEADER -->
     <header id="dv-header">
       <button class="dv-icon-btn" id="dv-btn-left-menu" aria-label="Open Info Menu">
         <svg class="dv-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>
@@ -47,21 +43,17 @@
       </button>
     </header>
 
-    <!-- DV CONTENT AREA (TABS) -->
     <main id="dv-content-area">
 
-      <!-- TAB 1: HOME (Ungated - Visible to All) -->
-      <section id="dv-tab-home" class="dv-tab dv-active-tab" aria-label="Home">
+      <section id="dv-tab-home" class="dv-tab dv-active-tab dv-tab-scroll" aria-label="Home">
         <div class="dv-hero-card">
           <h1 class="dv-hero-title">DV-Mission App</h1>
           <p class="dv-hero-tagline">Connecting the mission, securely and directly.</p>
         </div>
       </section>
 
-      <!-- TAB 2: GROUP (Gated Chat Room) -->
       <section id="dv-tab-group" class="dv-tab" aria-label="Group chat">
 
-        <!-- PIN ENTRY STATE (Visible when tab is clicked before Auth) -->
         <div id="dv-pin-container" class="dv-auth-box">
           <h2 class="dv-auth-title">Access Group Chat</h2>
           <p class="dv-auth-desc">Enter your PIN to join the mission chat.</p>
@@ -81,7 +73,6 @@
           <button id="dv-btn-login" class="dv-btn dv-btn-primary">Verify PIN</button>
         </div>
 
-        <!-- CHAT STATE (Hidden until PIN is verified) -->
         <div id="dv-group-chat-ui" class="dv-chat-layout dv-hidden">
           <div id="dv-group-msgs" class="dv-chat-list" aria-live="polite"></div>
           <div class="dv-chat-input-area">
@@ -104,7 +95,6 @@
         </div>
       </section>
 
-      <!-- TAB 3: CHAT (Private Inbox - Strictly Admin Only) -->
       <section id="dv-tab-chat" class="dv-tab dv-hidden" aria-label="Private admin chat">
         <div id="dv-private-chat-ui" class="dv-chat-layout">
           <div id="dv-private-msgs" class="dv-chat-list" aria-live="polite"></div>
@@ -128,8 +118,7 @@
         </div>
       </section>
 
-      <!-- TAB 4: MORE (Control Center - Strictly Admin Only) -->
-      <section id="dv-tab-more" class="dv-tab dv-hidden" aria-label="Control center">
+      <section id="dv-tab-more" class="dv-tab dv-hidden dv-tab-scroll" aria-label="Control center">
          <div class="dv-admin-panel">
            <h3 class="dv-admin-title">Control Center</h3>
            <label for="dv-ticker-input" class="dv-visually-hidden">New ticker message</label>
@@ -150,7 +139,6 @@
 
     </main>
 
-    <!-- DV BOTTOM NAVIGATION -->
     <nav id="dv-bottom-nav" role="navigation" aria-label="Primary">
       <button class="dv-nav-item dv-active" data-target="dv-tab-home" aria-current="page">
         <svg class="dv-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
@@ -172,7 +160,6 @@
     </nav>
   </div>
 
-  <!-- DV SIDEBARS -->
   <div id="dv-sidebar-overlay" class="dv-sidebar-overlay"></div>
 
   <aside id="dv-left-sidebar" class="dv-sidebar dv-sidebar-left" aria-hidden="true" aria-label="Public info">
@@ -203,24 +190,16 @@
     <div class="dv-menu-item" id="dv-btn-exit-right">Exit</div>
   </aside>
 
-  <!-- DV EDGE-TO-EDGE FULLSCREEN MODAL -->
   <div id="dv-edge-modal" class="dv-edge-modal" role="dialog" aria-modal="true" aria-labelledby="dv-modal-title" aria-hidden="true">
-    <header id="dv-modal-header" class="dv-header">
+    <header id="dv-modal-header">
       <button class="dv-icon-btn" id="dv-btn-close-modal" aria-label="Close">
         <svg class="dv-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
       </button>
-      <div id="dv-modal-title" class="dv-header-title">Title</div>
-      <div style="width: 40px;"></div>
+      <div id="dv-modal-title">Title</div>
+      <div class="dv-modal-spacer" aria-hidden="true"></div>
     </header>
     <div id="dv-modal-body" class="dv-modal-content"></div>
   </div>
-
-  <!-- ============================================================
-       DV MODAL CONTENT TEMPLATES
-       One <template> per sidebar item. app.js clones the matching
-       template into #dv-modal-body when a sidebar item is clicked.
-       Key mapping: data-modal="about-us"  ->  id="tpl-about-us"
-       ============================================================ -->
 
   <template id="tpl-about-us">
     <h2 class="dv-modal-heading">About Us</h2>
@@ -228,8 +207,34 @@
   </template>
 
   <template id="tpl-about-developer">
-    <h2 class="dv-modal-heading">About Developer</h2>
-    <p class="dv-modal-text">Developer information to be written.</p>
+    <div class="dv-dev-profile">
+
+      <div class="dv-dev-avatar-wrap">
+        <div class="dv-dev-avatar-ring" aria-hidden="true"></div>
+        <div class="dv-dev-avatar">
+          <img src="DEV_IMAGE_URL" alt="Developer photo" width="170" height="170">
+        </div>
+      </div>
+
+      <h2 class="dv-dev-name">Developer Name</h2>
+      <p class="dv-dev-role">Role / Title</p>
+
+      <p class="dv-dev-bio" id="dv-dev-bio">
+        Short bio goes here. This text is visible by default and can be expanded
+        using the Show More toggle below.
+      </p>
+
+      <p class="dv-dev-bio-more dv-hidden" id="dv-dev-bio-more">
+        Extended bio goes here. Anything placed in this paragraph will only appear
+        after the user taps Show More. Write the long-form background, achievements,
+        mission notes, or anything else that belongs behind a tap.
+      </p>
+
+      <button class="dv-dev-toggle" id="dv-btn-dev-toggle" aria-expanded="false" aria-controls="dv-dev-bio-more">
+        Show More
+      </button>
+
+    </div>
   </template>
 
   <template id="tpl-our-mission">
@@ -259,15 +264,14 @@
 
   <template id="tpl-accent-colors">
     <h2 class="dv-modal-heading">Accent Colors</h2>
-    <p class="dv-modal-text">Color palette selector to be implemented in app.js.</p>
+    <p class="dv-modal-text">Color palette selector to be implemented.</p>
   </template>
 
   <template id="tpl-todo-list">
     <h2 class="dv-modal-heading">To-Do List</h2>
-    <p class="dv-modal-text">Personal to-do list to be implemented in app.js.</p>
+    <p class="dv-modal-text">Personal to-do list to be implemented.</p>
   </template>
 
-  <!-- DV NOTIFICATION ENGINE -->
   <div id="dv-notification-layer" class="dv-notification-layer">
 
     <div id="dv-toast" class="dv-center-element dv-hidden" role="status" aria-live="polite">
@@ -286,13 +290,6 @@
     </div>
 
   </div>
-
-  <noscript>
-    <div style="padding: 24px; font-family: system-ui, sans-serif; text-align: center; color: #333;">
-      <h2>JavaScript Required</h2>
-      <p>DV-Mission App needs JavaScript to run. Please enable it in your browser settings and reload.</p>
-    </div>
-  </noscript>
 
   <script src="api.js"></script>
   <script src="app.js"></script>
