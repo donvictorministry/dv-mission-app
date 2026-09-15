@@ -1,12 +1,13 @@
 /* ==========================================================================
    DV-MISSION APP - CORE LOGIC ENGINE (app.js)
    Handles UI Interactions, MediaRecorder, Polling, and Role-Based Logic
+   Includes: Service Worker registration, PWA install prompt handling.
    ========================================================================== */
 
 // DV Global Application State
 const DV_STATE = {
   pin: "",
-  name: "",          // NEW: needed to identify "self" when rendering bubbles
+  name: "",
   role: "guest",
   micAllowed: true,
   lastSyncGroup: 0,
@@ -20,6 +21,9 @@ const DV_STATE = {
 let DV_MEDIA_RECORDER = null;
 let DV_AUDIO_CHUNKS = [];
 let DV_RECORD_TIMEOUT = null;
+
+// DV PWA Install Prompt (captured from beforeinstallprompt)
+let DV_INSTALL_PROMPT = null;
 
 /* ==========================================================================
    DV INITIALIZATION & EVENT LISTENERS
@@ -64,7 +68,6 @@ document.addEventListener("DOMContentLoaded", () => {
   // 6. Authentication & Action Buttons
   document.getElementById("dv-btn-login").addEventListener("click", dvVerifyPin);
 
-  // Allow Enter key to submit PIN
   document.getElementById("dv-pin-input").addEventListener("keydown", (e) => {
     if (e.key === "Enter") { e.preventDefault(); dvVerifyPin(); }
   });
@@ -85,7 +88,125 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Control Center
   document.getElementById("dv-btn-ticker").addEventListener("click", dvPushTicker);
+
+  // 7. PWA - Install App button + share button
+  document.getElementById("dv-btn-install").addEventListener("click", dvTriggerInstall);
+  document.getElementById("dv-btn-share").addEventListener("click", dvShareApp);
+
+  // 8. PWA - Register the service worker (after UI is wired)
+  dvRegisterServiceWorker();
+
+  // 9. Restore the font slider to the persisted value (if any)
+  dvRestoreFontSlider();
 });
+
+/* ==========================================================================
+   DV PWA LIFECYCLE
+   ========================================================================== */
+
+/**
+ * Registers sw.js so offline caching and installability work.
+ * Safe to call on any browser — silently no-ops if unsupported.
+ */
+function dvRegisterServiceWorker() {
+  if (!("serviceWorker" in navigator)) {
+    console.warn("[DV] Service workers not supported in this browser.");
+    return;
+  }
+
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("sw.js").then((registration) => {
+      console.log("[DV] Service worker registered. Scope:", registration.scope);
+    }).catch((err) => {
+      console.warn("[DV] Service worker registration failed:", err && err.message);
+    });
+  });
+}
+
+/**
+ * Captures the beforeinstallprompt event so we can trigger it later
+ * from the "Install App" menu item. Without this, the button does nothing.
+ */
+window.addEventListener("beforeinstallprompt", (event) => {
+  event.preventDefault();
+  DV_INSTALL_PROMPT = event;
+  console.log("[DV] Install prompt captured and ready.");
+});
+
+/**
+ * Fires the deferred install prompt when the user taps "Install App".
+ * If the prompt was never captured (already installed, unsupported browser,
+ * or beforeinstallprompt not yet fired), show a helpful toast instead.
+ */
+async function dvTriggerInstall() {
+  dvCloseSidebars();
+
+  if (!DV_INSTALL_PROMPT) {
+    dvShowToast("Install not available. App may already be installed, or your browser does not support it.");
+    return;
+  }
+
+  DV_INSTALL_PROMPT.prompt();
+
+  const choiceResult = await DV_INSTALL_PROMPT.userChoice;
+  if (choiceResult && choiceResult.outcome === "accepted") {
+    dvShowToast("Installing DV-Mission...");
+  } else {
+    dvShowToast("Installation cancelled.");
+  }
+
+  // The prompt can only be used once. Clear it.
+  DV_INSTALL_PROMPT = null;
+}
+
+window.addEventListener("appinstalled", () => {
+  DV_INSTALL_PROMPT = null;
+  dvShowToast("DV-Mission installed.");
+});
+
+/**
+ * Uses the Web Share API to share the app.
+ * Falls back to copying the URL if share is not supported.
+ */
+async function dvShareApp() {
+  dvCloseSidebars();
+
+  const shareData = {
+    title: "DV-Mission App",
+    text: "Connecting the mission, securely and directly.",
+    url: window.location.origin + window.location.pathname
+  };
+
+  if (navigator.share) {
+    try {
+      await navigator.share(shareData);
+    } catch (err) {
+      // User cancelled — no toast needed
+    }
+    return;
+  }
+
+  // Fallback: copy to clipboard
+  try {
+    await navigator.clipboard.writeText(shareData.url);
+    dvShowToast("Link copied to clipboard.");
+  } catch (err) {
+    dvShowToast("Sharing not supported on this device.");
+  }
+}
+
+/**
+ * On load, reads the persisted font size and syncs the slider to it
+ * so the UI matches the value set by the pre-paint script.
+ */
+function dvRestoreFontSlider() {
+  const slider = document.getElementById("dv-font-slider");
+  if (!slider) return;
+  try {
+    const saved = localStorage.getItem("dv-font-size");
+    if (saved) slider.value = saved;
+  } catch (e) {}
+}
 
 /* ==========================================================================
    DV NOTIFICATION ENGINE
@@ -137,13 +258,11 @@ function dvToggleSidebar(sidebarId) {
   const overlay = document.getElementById("dv-sidebar-overlay");
   const sidebar = document.getElementById(sidebarId);
 
-  // If already open, close
   if (sidebar.classList.contains("dv-open")) {
     dvCloseSidebars();
     return;
   }
 
-  // Close both first, then open the requested one
   document.getElementById("dv-left-sidebar").classList.remove("dv-open");
   document.getElementById("dv-right-sidebar").classList.remove("dv-open");
 
@@ -168,12 +287,10 @@ function dvOpenEdgeModal(key) {
   if (!key) return;
   dvCloseSidebars();
 
-  // Derive template ID from the key: "about-us" -> "tpl-about-us"
   const templateId = "tpl-" + key;
   const template = document.getElementById(templateId);
 
   if (!template) {
-    // Fallback if template missing
     document.getElementById("dv-modal-title").textContent = key;
     document.getElementById("dv-modal-body").innerHTML = "";
     document.getElementById("dv-edge-modal").classList.add("dv-open");
@@ -181,10 +298,7 @@ function dvOpenEdgeModal(key) {
     return;
   }
 
-  // Clone template content
   const clone = template.content.cloneNode(true);
-
-  // Derive title from the first heading inside the template
   const heading = template.content.querySelector(".dv-modal-heading");
   const title = heading ? heading.textContent : key;
 
@@ -203,7 +317,6 @@ function dvCloseEdgeModal() {
   const modal = document.getElementById("dv-edge-modal");
   modal.classList.remove("dv-open");
   modal.setAttribute("aria-hidden", "true");
-  // Clear body content after transition so next open starts clean
   setTimeout(() => {
     document.getElementById("dv-modal-body").innerHTML = "";
   }, 300);
@@ -257,11 +370,9 @@ async function dvVerifyPin() {
   DV_STATE.micAllowed = response.micEnabled;
   DV_STATE.name = response.name || (response.role === "admin" ? "Admin" : "User");
 
-  // Swap Group Tab UI from PIN Entry to Chat UI
   document.getElementById("dv-pin-container").classList.add("dv-hidden");
   document.getElementById("dv-group-chat-ui").classList.remove("dv-hidden");
 
-  // Dynamic Layout: Unhide Admin Tabs
   if (DV_STATE.role === "admin") {
     document.getElementById("dv-nav-chat").classList.remove("dv-hidden");
     document.getElementById("dv-nav-more").classList.remove("dv-hidden");
@@ -290,7 +401,7 @@ function dvStartPolling() {
         lastSyncPrivate: DV_STATE.lastSyncPrivate
       });
     } catch (err) {
-      return; // silent on network failure; next tick retries
+      return;
     }
 
     if (!res || !res.ok) return;
@@ -327,7 +438,6 @@ function dvRenderBubble(msg, roomType) {
 
   if (document.getElementById(`dv-msg-${msg.id}`)) return;
 
-  // Correct self-detection: compare sender to the authenticated user's own name
   const isSelf = msg.sender === DV_STATE.name;
 
   const row = document.createElement("div");
@@ -346,7 +456,6 @@ function dvRenderBubble(msg, roomType) {
   textEl.className = "dv-msg-text";
 
   if (msg.type === "AUDIO") {
-    // Build audio player with event listener (not inline onclick)
     const player = document.createElement("div");
     player.className = "dv-audio-player";
 
@@ -364,7 +473,6 @@ function dvRenderBubble(msg, roomType) {
 
     textEl.appendChild(player);
   } else {
-    // Use textContent to prevent XSS from message content
     textEl.textContent = msg.content;
   }
 
@@ -406,7 +514,7 @@ async function dvSendTextMessage(roomType) {
   dvHideLoader();
 
   if (res && res.ok) {
-    inputEl.value = ""; // Clear ONLY on success
+    inputEl.value = "";
   } else {
     dvShowToast((res && res.error) || "Message failed to send.");
   }
@@ -470,7 +578,6 @@ function dvStopRecording() {
 function dvProcessAndUploadAudio(roomType) {
   const blob = new Blob(DV_AUDIO_CHUNKS, { type: 'audio/webm' });
 
-  // Size guard — backend caps at 3MB base64, ~2.2MB raw
   if (blob.size > 2000000) {
     dvShowToast("Recording too large. Try a shorter clip.");
     return;
