@@ -6,33 +6,43 @@
 /* DV CSS VARIABLES (Theming Engine) */
 :root {
   /* Default Light Mode (Facebook Branding) */
-  --dv-primary: #1877F2; 
+  --dv-primary: #1877F2;
   --dv-bg-main: #FFFFFF;
-  --dv-bg-surface: #F0F2F5; /* Slightly offset for input areas/chat bg */
+  --dv-bg-surface: #F0F2F5;
   --dv-text-main: #000000;
   --dv-text-muted: #65676B;
   --dv-border: #E4E6EB;
-  
+
   /* Chat Bubbles */
   --dv-bubble-in: #F0F2F5;
   --dv-bubble-in-text: #000000;
   --dv-bubble-out: #1877F2;
   --dv-bubble-out-text: #FFFFFF;
-  
+
+  /* Semantic */
+  --dv-danger: #FF3B30;
+  --dv-toast-bg: #323232;
+  --dv-shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+  --dv-shadow-md: 0 4px 12px rgba(0,0,0,0.15);
+  --dv-shadow-lg: 0 8px 32px rgba(0,0,0,0.2);
+
   /* Dynamic Typography */
   --dv-font-size: 18px;
 }
 
-/* DV DARK MODE OVERRIDES */
+/* DV DARK MODE OVERRIDES
+   Matches both html.dv-dark-mode (pre-paint) and body.dv-dark-mode (runtime toggle) */
+html.dv-dark-mode,
 body.dv-dark-mode {
   --dv-bg-main: #000000;
   --dv-bg-surface: #18191A;
   --dv-text-main: #FFFFFF;
   --dv-text-muted: #B0B3B8;
   --dv-border: #3A3B3C;
-  
+
   --dv-bubble-in: #3A3B3C;
   --dv-bubble-in-text: #FFFFFF;
+  --dv-toast-bg: #4A4A4A;
 }
 
 /* ==========================================================================
@@ -68,6 +78,25 @@ body {
   display: none !important;
 }
 
+/* Accessibility: visually hidden labels, readable by screen readers only */
+.dv-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Focus visibility for keyboard and assistive tech */
+:focus-visible {
+  outline: 2px solid var(--dv-primary);
+  outline-offset: 2px;
+}
+
 /* ==========================================================================
    DV LAYOUT SKELETON
    ========================================================================== */
@@ -101,6 +130,12 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+  border-radius: 50%;
+  transition: background-color 0.15s ease;
+}
+
+.dv-icon-btn:active {
+  background-color: rgba(255,255,255,0.15);
 }
 
 #dv-header-title {
@@ -116,7 +151,7 @@ body {
   flex-grow: 1;
   position: relative;
   background-color: var(--dv-bg-main);
-  overflow: hidden; /* Tabs handle their own scrolling */
+  overflow: hidden;
 }
 
 /* Tabs */
@@ -125,7 +160,11 @@ body {
   position: absolute;
   inset: 0;
   flex-direction: column;
-  overflow-y: auto;
+  overflow: hidden; /* Inner elements own their scroll */
+}
+
+.dv-tab.dv-tab-scroll {
+  overflow-y: auto; /* For tabs that need page-level scroll (home, admin) */
 }
 
 .dv-active-tab {
@@ -134,12 +173,12 @@ body {
 
 /* Bottom Navigation */
 #dv-bottom-nav {
-  height: 65px;
+  min-height: 65px;
   background-color: var(--dv-bg-main);
   display: flex;
   border-top: 1px solid var(--dv-border);
   flex-shrink: 0;
-  padding-bottom: env(safe-area-inset-bottom); /* iOS safe area */
+  padding-bottom: env(safe-area-inset-bottom);
   z-index: 10;
 }
 
@@ -153,6 +192,11 @@ body {
   border: none;
   color: var(--dv-text-muted);
   cursor: pointer;
+  transition: color 0.15s ease, transform 0.1s ease;
+}
+
+.dv-nav-item:active {
+  transform: scale(0.95);
 }
 
 .dv-nav-item.dv-active {
@@ -177,6 +221,16 @@ body {
   cursor: pointer;
   text-align: center;
   width: 100%;
+  transition: opacity 0.15s ease, transform 0.1s ease;
+}
+
+.dv-btn:active {
+  opacity: 0.85;
+  transform: scale(0.98);
+}
+
+.dv-btn-inline {
+  width: auto;
 }
 
 .dv-btn-primary {
@@ -200,22 +254,30 @@ body {
   border-color: var(--dv-primary);
 }
 
+.dv-input:focus-visible {
+  outline: 2px solid var(--dv-primary);
+  outline-offset: 1px;
+}
+
 /* Hero / Auth Box */
-.dv-hero-card, .dv-auth-box {
+.dv-hero-card,
+.dv-auth-box {
+  flex: 1;
   padding: 24px;
   text-align: center;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  height: 100%;
 }
 
-.dv-hero-title, .dv-auth-title {
+.dv-hero-title,
+.dv-auth-title {
   color: var(--dv-primary);
   margin-bottom: 12px;
 }
 
-.dv-hero-tagline, .dv-auth-desc {
+.dv-hero-tagline,
+.dv-auth-desc {
   color: var(--dv-text-muted);
   margin-bottom: 24px;
 }
@@ -227,6 +289,7 @@ body {
   display: flex;
   flex-direction: column;
   height: 100%;
+  min-height: 0; /* Allow flex child to shrink so inner scroll works */
 }
 
 .dv-chat-list {
@@ -237,11 +300,18 @@ body {
   flex-direction: column;
   gap: 12px;
   background-color: var(--dv-bg-main);
+  min-height: 0;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
 }
 
 .dv-msg-row {
   display: flex;
   width: 100%;
+}
+
+.dv-msg-in {
+  justify-content: flex-start;
 }
 
 .dv-msg-out {
@@ -253,10 +323,11 @@ body {
   padding: 10px 14px;
   border-radius: 16px;
   word-wrap: break-word;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  overflow-wrap: anywhere;
+  box-shadow: var(--dv-shadow-sm);
 }
 
-.dv-msg-row:not(.dv-msg-out) .dv-bubble {
+.dv-msg-in .dv-bubble {
   background-color: var(--dv-bubble-in);
   color: var(--dv-bubble-in-text);
   border-top-left-radius: 4px;
@@ -287,6 +358,7 @@ body {
   align-items: flex-end;
   gap: 8px;
   border-top: 1px solid var(--dv-border);
+  flex-shrink: 0;
 }
 
 .dv-chat-input {
@@ -300,6 +372,12 @@ body {
   color: var(--dv-text-main);
   font-size: var(--dv-font-size);
   outline: none;
+  resize: none;
+}
+
+.dv-chat-input:focus-visible {
+  outline: 2px solid var(--dv-primary);
+  outline-offset: 1px;
 }
 
 .dv-action-btn {
@@ -314,16 +392,22 @@ body {
   justify-content: center;
   flex-shrink: 0;
   cursor: pointer;
+  transition: opacity 0.15s ease, transform 0.1s ease;
+}
+
+.dv-action-btn:active {
+  opacity: 0.85;
+  transform: scale(0.95);
 }
 
 .dv-recording {
-  background-color: #FF3B30 !important;
+  background-color: var(--dv-danger) !important;
   animation: dv-pulse 1.2s infinite;
 }
 
 @keyframes dv-pulse {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.1); }
+  0%   { transform: scale(1); }
+  50%  { transform: scale(1.1); }
   100% { transform: scale(1); }
 }
 
@@ -347,11 +431,19 @@ body {
    DV SIDEBARS (Slide Over)
    ========================================================================== */
 .dv-sidebar-overlay {
-  display: none;
   position: fixed;
   inset: 0;
-  background: transparent; /* No dimming per requirements */
+  background: transparent;
   z-index: 100;
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity 0.25s ease, visibility 0s linear 0.25s;
+}
+
+.dv-sidebar-overlay.dv-open {
+  visibility: visible;
+  opacity: 1;
+  transition: opacity 0.25s ease, visibility 0s linear 0s;
 }
 
 .dv-sidebar {
@@ -359,6 +451,7 @@ body {
   top: 0;
   bottom: 0;
   width: 280px;
+  max-width: 85vw;
   background-color: var(--dv-bg-main);
   z-index: 101;
   overflow-y: auto;
@@ -397,10 +490,19 @@ body {
   cursor: pointer;
   font-size: var(--dv-font-size);
   color: var(--dv-text-main);
+  transition: background-color 0.15s ease;
+}
+
+.dv-menu-item:active {
+  background-color: var(--dv-bg-surface);
 }
 
 .dv-no-click {
   cursor: default;
+}
+
+.dv-no-click:active {
+  background-color: transparent;
 }
 
 .dv-font-control {
@@ -414,23 +516,40 @@ body {
    ========================================================================== */
 .dv-edge-modal {
   position: fixed;
-  inset: 0; /* Top, Right, Bottom, Left = 0 */
+  inset: 0;
   background-color: var(--dv-bg-main);
-  z-index: 200; /* Above everything else */
+  z-index: 200;
   transform: translateX(100%);
   transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   flex-direction: column;
+  visibility: hidden;
 }
 
 .dv-edge-modal.dv-open {
   transform: translateX(0);
+  visibility: visible;
 }
 
 .dv-modal-content {
   flex-grow: 1;
   overflow-y: auto;
   padding: 24px;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+/* Modal content typography (used by templates) */
+.dv-modal-heading {
+  color: var(--dv-primary);
+  margin-bottom: 16px;
+  font-size: calc(var(--dv-font-size) + 4px);
+}
+
+.dv-modal-text {
+  color: var(--dv-text-main);
+  line-height: 1.6;
+  margin-bottom: 16px;
 }
 
 /* ==========================================================================
@@ -440,7 +559,7 @@ body {
   position: fixed;
   inset: 0;
   z-index: 9999;
-  pointer-events: none; /* Let clicks pass through empty areas */
+  pointer-events: none;
 }
 
 .dv-center-element {
@@ -448,19 +567,20 @@ body {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  pointer-events: auto; /* Re-enable clicks on the element itself */
+  pointer-events: auto;
 }
 
 /* Toast */
 #dv-toast {
-  background-color: #323232; /* Standard Android Toast color */
+  background-color: var(--dv-toast-bg);
   color: #FFFFFF;
   padding: 12px 24px;
   border-radius: 24px;
   font-size: calc(var(--dv-font-size) - 2px);
   text-align: center;
-  white-space: nowrap;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  max-width: 80vw;
+  word-break: break-word;
+  box-shadow: var(--dv-shadow-md);
 }
 
 /* Alert Modal */
@@ -469,10 +589,10 @@ body {
   border: 1px solid var(--dv-border);
   padding: 24px;
   border-radius: 12px;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+  box-shadow: var(--dv-shadow-lg);
   text-align: center;
-  min-width: 280px;
-  max-width: 90%;
+  min-width: min(280px, 80vw);
+  max-width: 90vw;
 }
 
 .dv-alert-text {
@@ -499,9 +619,24 @@ body {
 }
 
 @keyframes dv-dash {
-  0% { stroke-dasharray: 1, 150; stroke-dashoffset: 0; }
-  50% { stroke-dasharray: 90, 150; stroke-dashoffset: -35; }
+  0%   { stroke-dasharray: 1, 150; stroke-dashoffset: 0; }
+  50%  { stroke-dasharray: 90, 150; stroke-dashoffset: -35; }
   100% { stroke-dasharray: 90, 150; stroke-dashoffset: -124; }
+}
+
+/* Reduced motion: respect user preference */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  .dv-spinner,
+  .dv-recording {
+    animation: none !important;
+  }
 }
 
 /* ==========================================================================
